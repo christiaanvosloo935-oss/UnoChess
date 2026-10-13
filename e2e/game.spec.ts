@@ -213,3 +213,29 @@ test('the guide is also available from the home page and the waiting room', asyn
   await expect(page.getByTestId('guide-entry')).toHaveCount(11);
   await expect(page.locator('[data-testid=guide-entry].held')).toHaveCount(0);
 });
+
+test('hovering a board square or a card never changes its colour', async ({ browser }) => {
+  const { alice } = await twoPlayers(browser);
+  const background = (locator: import('@playwright/test').Locator) =>
+    locator.evaluate((el) => getComputedStyle(el).backgroundColor);
+
+  const e4 = square(alice, 'e4');
+  const squareBefore = await background(e4);
+  await e4.hover();
+  await alice.waitForTimeout(250); // let any colour transition finish before reading the style
+  expect(await background(e4)).toBe(squareBefore);
+
+  const card = alice.locator('[data-testid=hand] button').first();
+  const cardBefore = await background(card);
+  await card.hover();
+  await alice.waitForTimeout(250); // let the hover lift transition finish
+  expect(await background(card)).toBe(cardBefore);
+
+  // Quiet buttons get their own light hover colour, never the blue of the main buttons.
+  await alice.getByRole('button', { name: 'Resign' }).hover();
+  await alice.waitForTimeout(250);
+  expect(await background(alice.getByRole('button', { name: 'Resign' }))).toBe('rgb(249, 250, 251)');
+  await alice.getByTestId('tab-cards').hover();
+  await alice.waitForTimeout(250);
+  expect(await background(alice.getByTestId('tab-cards'))).toBe('rgb(221, 225, 233)');
+});
