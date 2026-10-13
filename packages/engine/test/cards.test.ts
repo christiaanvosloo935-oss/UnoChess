@@ -75,6 +75,22 @@ describe('6 · Swap', () => {
   });
 });
 
+describe('6 · Swap and frozen pieces', () => {
+  it('a frozen piece cannot be swapped', () => {
+    const six = num(6);
+    const base = stateFrom('4k3/p6r/8/8/8/8/8/K7 b - - 0 1', { b: [six] });
+    const pawn = idAt(base, 'a7');
+    const king = idAt(base, 'e8');
+    const rook = idAt(base, 'h7');
+    expect(pairHas(legalSwaps(base, 'B'), pawn, king)).toBe(true);
+    const frozen: GameState = { ...base, effects: { frozen: [{ pieceId: pawn, army: 'b' }], shields: [], pendingSkip: null } };
+    const pairs = legalSwaps(frozen, 'B');
+    expect(pairs.some(([a, b]) => a === pawn || b === pawn)).toBe(false);
+    expect(pairHas(pairs, king, rook)).toBe(true);
+    expect(fail(frozen, 'B', play(six, { type: 'swap', a: pawn, b: king }))).toMatch(/swap/i);
+  });
+});
+
 describe('7 · Freeze', () => {
   it("a frozen piece can't move on its army's next turn, and can the turn after", () => {
     const seven = num(7);

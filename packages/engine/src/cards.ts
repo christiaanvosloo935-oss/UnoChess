@@ -19,14 +19,15 @@ function squareOfPiece(chess: ChessState, id: string): Square {
   return chess.board.findIndex((p) => p?.id === id);
 }
 
-/** Unordered pairs (ids sorted ascending) of own pieces that may legally swap. */
+/** Unordered pairs (ids sorted ascending) of own pieces that may legally swap. A frozen piece can't be moved, so it can't be swapped. */
 export function legalSwaps(state: GameState, player: PlayerId): [string, string][] {
   const army = armyOf(state, player);
   const enemy: Army = army === 'w' ? 'b' : 'w';
   const lastRank = army === 'w' ? 7 : 0;
+  const frozen = new Set(state.effects.frozen.filter((f) => f.army === army).map((f) => f.pieceId));
   const own = state.chess.board
     .map((p, sq) => ({ p, sq }))
-    .filter((x) => x.p && x.p.army === army) as { p: NonNullable<ChessState['board'][number]>; sq: Square }[];
+    .filter((x) => x.p && x.p.army === army && !frozen.has(x.p.id)) as { p: NonNullable<ChessState['board'][number]>; sq: Square }[];
   const out: [string, string][] = [];
   for (let i = 0; i < own.length; i++) {
     for (let j = i + 1; j < own.length; j++) {
