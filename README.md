@@ -42,7 +42,7 @@ and plays a game between two real browser windows. It uses the Chromium already 
 
 1. Create a free account at <https://render.com> and connect your GitHub account.
 2. **New → Blueprint**, pick this repository and the branch you want to publish.
-3. Render reads `render.yaml`, builds, and gives you a URL like `https://unochess.onrender.com`.
+3. Render reads `render.yaml` (which follows the `main` branch and redeploys automatically whenever `main` changes), builds, and gives you a URL like `https://unochess.onrender.com`.
 4. Open it, click **New game**, and send the game link to your friend.
 
 Notes:
