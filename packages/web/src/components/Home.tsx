@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { createGame } from '../api';
+import { CardGuideModal } from './CardGuide';
 import { getNickname, saveNickname, setSeat } from '../seat';
 
 export function Home({ note, go }: { note?: string; go: (path: string) => void }) {
   const [nick, setNick] = useState(getNickname());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [guide, setGuide] = useState(false);
 
   const create = async () => {
     const name = nick.trim();
@@ -36,6 +38,8 @@ export function Home({ note, go }: { note?: string; go: (path: string) => void }
         <button type="submit" disabled={busy} data-testid="new-game">New game</button>
       </form>
       {error && <p className="error">{error}</p>}
+      <button type="button" className="secondary" onClick={() => setGuide(true)} data-testid="home-guide">How the cards work</button>
+      {guide && <CardGuideModal onClose={() => setGuide(false)} />}
     </main>
   );
 }

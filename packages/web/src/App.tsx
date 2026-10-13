@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { CardGuideModal } from './components/CardGuide';
 import { Chat } from './components/Chat';
 import { Game } from './components/Game';
 import { Home } from './components/Home';
@@ -38,6 +39,7 @@ function NicknamePrompt({ onDone }: { onDone: (nick: string) => void }) {
 
 function GameRoute({ gameId, go }: { gameId: string; go: (path: string) => void }) {
   const [nickname, setNickname] = useState<string | null>(() => (getSeat(gameId) || getNickname() ? getNickname() : null));
+  const [guide, setGuide] = useState(false);
   const { conn, send, rematch, chat, me, sendChat, lastError, errorKey, clearError } = useGame(gameId, nickname);
 
   useEffect(() => {
@@ -61,6 +63,8 @@ function GameRoute({ gameId, go }: { gameId: string; go: (path: string) => void 
           <p>Send them this link:</p>
           <input readOnly value={link} data-testid="copy-link" onFocus={(e) => e.target.select()} />
           <button onClick={() => navigator.clipboard?.writeText(link)}>Copy link</button>
+          <button type="button" className="secondary" onClick={() => setGuide(true)} data-testid="home-guide">How the cards work</button>
+          {guide && <CardGuideModal onClose={() => setGuide(false)} />}
           <Chat messages={chat} me={me} onSend={sendChat} />
         </main>
       );

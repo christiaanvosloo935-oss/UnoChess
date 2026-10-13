@@ -34,9 +34,11 @@ interface Props {
   selected?: boolean;
   asOne?: boolean;
   small?: boolean;
+  label?: string; // overrides the big symbol (used by the card guide)
+  caption?: string;
 }
 
-export function CardView({ card, onClick, disabled, selected, asOne, small }: Props) {
+export function CardView({ card, onClick, disabled, selected, asOne, small, label, caption }: Props) {
   const colour = card.colour ?? 'wild';
   return (
     <button
@@ -47,9 +49,9 @@ export function CardView({ card, onClick, disabled, selected, asOne, small }: Pr
       data-testid={`card-${card.id}`}
       title={asOne ? `${cardName(card)} (play as a 1 move)` : cardName(card)}
     >
-      <span className="corner">{cardSymbol(card)}</span>
-      <span className="oval">{cardSymbol(card)}</span>
-      <span className="caption">{asOne ? 'as 1 move' : cardName(card)}</span>
+      <span className="corner">{label ?? cardSymbol(card)}</span>
+      <span className={`oval${(label ?? cardSymbol(card)).length > 2 ? ' wide' : ''}`}>{label ?? cardSymbol(card)}</span>
+      <span className="caption">{asOne ? 'as 1 move' : (caption ?? cardName(card))}</span>
     </button>
   );
 }
