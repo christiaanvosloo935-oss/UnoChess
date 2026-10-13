@@ -1,0 +1,68 @@
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type { Action, PlayerView, RoomInfo, ServerMessage } from '@unochess/engine';
+import { getSeat, setSeat } from './seat';
+
+export type GameConn =
+  | { status: 'connecting' | 'reconnecting' }
+  | { status: 'lobby'; names: string[] }
+  | { status: 'playing'; view: PlayerView; room: RoomInfo }
+  | { status: 'gone'; reason: 'not-found' | 'full' };
+
+const BACKOFF_MS = [1000, 2000, 4000, 8000];
+
+export function useGame(gameId: string, nickname: string | null) {
+  const [conn, setConn] = useState<GameConn>({ status: 'connecting' });
+  const [error, setError] = useState<{ text: string; n: number } | null>(null);
+  const socket = useRef<WebSocket | null>(null);
+
+  useEffect(() => {
+    if (nickname === null) return;
+    let stopped = false;
+    let attempt = 0;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    const connect = () => {
+      const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const ws = new WebSocket(`${proto}//${location.host}/ws`);
+      socket.current = ws;
+      ws.onopen = () => {
+        attempt = 0;
+        ws.send(JSON.stringify({ type: 'join', gameId, nickname, seatToken: getSeat(gameId) }));
+      };
+      ws.onmessage = (ev) => {
+        const msg = JSON.parse(String(ev.data)) as ServerMessage;
+        switch (msg.type) {
+          case 'joined': setSeat(gameId, msg.seatToken); break;
+          case 'lobby': setConn({ status: 'lobby', names: msg.names }); break;
+          case 'state': setConn({ status: 'playing', view: msg.view, room: msg.room }); break;
+          case 'error': setError((e) => ({ text: msg.message, n: (e?.n ?? 0) + 1 })); break;
+          case 'gone':
+            stopped = true;
+            setConn({ status: 'gone', reason: msg.reason });
+            break;
+        }
+      };
+      ws.onclose = () => {
+        if (stopped) return;
+        setConn({ status: 'reconnecting' });
+        timer = setTimeout(connect, BACKOFF_MS[Math.min(attempt++, BACKOFF_MS.length - 1)]);
+      };
+    };
+
+    connect();
+    return () => {
+      stopped = true;
+      clearTimeout(timer);
+      socket.current?.close();
+    };
+  }, [gameId, nickname]);
+
+  const sendRaw = useCallback((msg: unknown) => {
+    if (socket.current?.readyState === WebSocket.OPEN) socket.current.send(JSON.stringify(msg));
+  }, []);
+  const send = useCallback((action: Action) => sendRaw({ type: 'action', action }), [sendRaw]);
+  const rematch = useCallback(() => sendRaw({ type: 'rematch' }), [sendRaw]);
+  const clearError = useCallback(() => setError(null), []);
+
+  return { conn, send, rematch, lastError: error?.text ?? null, errorKey: error?.n ?? 0, clearError };
+}
