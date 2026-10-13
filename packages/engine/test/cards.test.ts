@@ -173,6 +173,25 @@ describe('9 · Trade Hands', () => {
   });
 });
 
+describe('9 · Trade Hands with an empty result', () => {
+  it('a player who is left with no cards draws one at the start of their turn', () => {
+    const nine = num(9);
+    const s = stateFrom(START_FEN, { w: [nine], b: [num(1), num(2), num(3)] });
+    const after = ok(s, 'A', play(nine));
+    expect(after.current).toBe('B');
+    expect(after.hands.A).toHaveLength(4);
+    expect(after.hands.B).toHaveLength(1);
+    expect(playableCards(after, 'B')).toHaveLength(1);
+  });
+
+  it('even a hand traded down to nothing never leaves the player without a card', () => {
+    const nine = num(9);
+    const s = stateFrom(START_FEN, { w: [nine], b: [] });
+    const after = ok(s, 'A', play(nine));
+    expect(after.hands.B.length).toBeGreaterThan(0);
+  });
+});
+
 describe('Reverse', () => {
   it('B moves next, controlling white; castling rights stay with the armies', () => {
     const rev = card('reverse');

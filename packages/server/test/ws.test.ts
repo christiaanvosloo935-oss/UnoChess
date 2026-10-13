@@ -153,6 +153,23 @@ describe('websocket game', () => {
     expect(ok.status).toBe(200);
   });
 
+  it('survives protocol-level garbage (oversized and non-UTF-8 frames)', async () => {
+    const server = await boot();
+    const oversized = await Client.connect(server.port);
+    const closed1 = new Promise<void>((res) => oversized.ws.once('close', () => res()));
+    oversized.send('x'.repeat(20_000));
+    await closed1;
+    const badUtf8 = await Client.connect(server.port);
+    const closed2 = new Promise<void>((res) => badUtf8.ws.once('close', () => res()));
+    badUtf8.ws.send(Buffer.from([0xff, 0xfe, 0xfd]), { binary: false });
+    await closed2;
+    const ok = await createViaHttp(server.port);
+    expect(ok.status).toBe(200);
+    const c = await Client.connect(server.port);
+    c.send({ type: 'join', gameId: ok.body.gameId, nickname: 'Alice', seatToken: ok.body.seatToken });
+    await c.waitFor((m) => m.type === 'joined');
+  });
+
   it('restores the moving phase after a refresh mid-turn', async () => {
     const server = await boot();
     const { a, gameId, seatToken } = await startGame(server.port);

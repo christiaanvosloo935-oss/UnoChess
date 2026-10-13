@@ -158,13 +158,9 @@ function reverseEffect(s: GameState, player: PlayerId, playedArmy: Army): void {
 
 function penaltyEffect(s: GameState, player: PlayerId, playedArmy: Army, count: number): void {
   const other = opponentOf(s, player);
-  const drawn = drawCards(s, count);
-  s.hands[other].push(...drawn.cards);
-  s.drawPile = drawn.piles.drawPile;
-  s.discardPile = drawn.piles.discardPile;
-  s.seed = drawn.piles.seed;
+  const drawn = drawFor(s, other, count);
   s.effects.pendingSkip = other;
-  log(s, player, `made their opponent draw ${drawn.cards.length}`);
+  log(s, player, `made their opponent draw ${drawn}`);
   endCard(s, player, playedArmy);
 }
 
@@ -271,13 +267,7 @@ function doneMoving(s: GameState, player: PlayerId): string | void {
 
 /** Finishes the current card: draw step, expire effects, pass the turn, then judge the new position. */
 export function endCard(s: GameState, player: PlayerId, playedArmy: Army): void {
-  if (s.hands[player].length < HAND_SIZE) {
-    const drawn = drawCards(s, 1);
-    s.hands[player].push(...drawn.cards);
-    s.drawPile = drawn.piles.drawPile;
-    s.discardPile = drawn.piles.discardPile;
-    s.seed = drawn.piles.seed;
-  }
+  if (s.hands[player].length < HAND_SIZE) drawFor(s, player, 1);
   s.effects.frozen = s.effects.frozen.filter((f) => f.army !== playedArmy);
   if (s.chess.ep && s.chess.ep.setOnTurn !== s.turn) s.chess.ep = null;
   s.turn += 1;
@@ -291,7 +281,19 @@ export function endCard(s: GameState, player: PlayerId, playedArmy: Army): void 
     s.turn += 1;
     s.current = opponentOf(s, s.current);
   }
+  // Trade Hands can leave a player with nothing to play; they draw one so the game never stalls.
+  if (s.hands[s.current].length === 0) drawFor(s, s.current, 1);
   judge(s);
+}
+
+/** Moves up to n cards from the draw pile (reshuffling the discard pile when needed) into a player's hand. */
+function drawFor(s: GameState, player: PlayerId, n: number): number {
+  const drawn = drawCards(s, n);
+  s.hands[player].push(...drawn.cards);
+  s.drawPile = drawn.piles.drawPile;
+  s.discardPile = drawn.piles.discardPile;
+  s.seed = drawn.piles.seed;
+  return drawn.cards.length;
 }
 
 function judge(s: GameState): void {

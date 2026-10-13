@@ -51,8 +51,13 @@ export function attachWebSocket(server: Server, rooms: Rooms): WebSocketServer {
     }
   });
 
+  // ws raises 'error' for protocol violations (oversized or non-UTF-8 frames) and closes that socket itself;
+  // without a listener Node would treat it as unhandled and take every game down with it.
+  wss.on('error', () => {});
+
   wss.on('connection', (ws) => {
     let me: Client | null = null;
+    ws.on('error', () => {});
 
     ws.on('message', (raw) => {
       const msg = parse(String(raw));
