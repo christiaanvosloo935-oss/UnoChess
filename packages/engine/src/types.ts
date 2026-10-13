@@ -35,3 +35,12 @@ export interface Move {
   enPassant?: boolean;
   as?: PieceType;
 }
+
+export type Colour = 'red' | 'yellow' | 'green' | 'blue';
+export type CardKind = 'num' | 'skip' | 'reverse' | 'draw2' | 'wild' | 'wild4';
+export interface Card {
+  id: string;
+  kind: CardKind;
+  colour: Colour | null;
+  value?: number; // 0-9, only for 'num'
+}
