@@ -78,7 +78,8 @@ form { display: flex; flex-direction: column; gap: 1rem; }
 
 .board {
   display: grid;
-  grid-template-columns: repeat(8, 1fr);
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  grid-template-rows: repeat(8, minmax(0, 1fr));
   width: var(--board);
   height: var(--board);
   border: 3px solid #0d0f1a;
@@ -94,6 +95,9 @@ form { display: flex; flex-direction: column; gap: 1rem; }
   border: 0;
   border-radius: 0;
   cursor: default;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
   font-size: calc(var(--board) / 8 * 0.78);
   line-height: 1;
   color: inherit;
