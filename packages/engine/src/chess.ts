@@ -1,4 +1,4 @@
-import type { Army, ChessState, Move, Piece, PieceType, Square } from './types.js';
+import type { Army, Castling, ChessState, Move, Piece, PieceType, Square } from './types.js';
 
 export interface MoveContext {
   frozen?: ReadonlySet<string>; // piece ids that may not move
@@ -166,6 +166,20 @@ function pseudoMoves(
   return out;
 }
 
+/** Castling rights lost because a piece left or landed on any of these squares. */
+export function revokeCastling(rights: Castling, ...squares: Square[]): Castling {
+  const out = { w: { ...rights.w }, b: { ...rights.b } };
+  for (const sq of squares) {
+    if (sq === 4) out.w = { k: false, q: false };
+    else if (sq === 60) out.b = { k: false, q: false };
+    else if (sq === 0) out.w.q = false;
+    else if (sq === 7) out.w.k = false;
+    else if (sq === 56) out.b.q = false;
+    else if (sq === 63) out.b.k = false;
+  }
+  return out;
+}
+
 export function applyChessMove(
   chess: ChessState,
   move: Move,
@@ -189,15 +203,7 @@ export function applyChessMove(
     board[rookFrom] = null;
   }
 
-  const castling = { w: { ...chess.castling.w }, b: { ...chess.castling.b } };
-  for (const sq of [move.from, move.to]) {
-    if (sq === 4) castling.w = { k: false, q: false };
-    else if (sq === 60) castling.b = { k: false, q: false };
-    else if (sq === 0) castling.w.q = false;
-    else if (sq === 7) castling.w.k = false;
-    else if (sq === 56) castling.b.q = false;
-    else if (sq === 63) castling.b.k = false;
-  }
+  const castling = revokeCastling(chess.castling, move.from, move.to);
 
   let ep: ChessState['ep'] = null;
   if (piece.type === 'p' && move.as === undefined && Math.abs(rankOf(move.to) - rankOf(move.from)) === 2) {

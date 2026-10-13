@@ -1,10 +1,10 @@
 import { applyChessMove, isInCheck, legalMoves } from './chess.js';
-import { playableCards } from './cards.js';
+import { legalFreezeTargets, legalShieldTargets, legalSwaps, playableCards, squareOfPiece, swapSquares } from './cards.js';
 import { buildDeck, drawCards } from './deck.js';
 import { fromFen, START_FEN } from './fen.js';
 import { shuffle } from './rng.js';
 import { armyOf, ctxFor, inCheckNow, opponentOf } from './state.js';
-import type { Action, ApplyResult, Army, Card, GameState, PlayerId } from './types.js';
+import type { Action, ApplyResult, Army, Card, EffectArgs, GameState, PlayerId } from './types.js';
 
 export { armyOf, inCheckNow, opponentOf };
 
@@ -88,12 +88,86 @@ function playCard(s: GameState, player: PlayerId, action: Extract<Action, { type
   log(s, player, asOne ? `played ${cardLabel(card)} as a 1` : `played ${cardLabel(card)}`);
 
   if (asOne) return startMoving(s, player, card.id, 1);
-  if (card.kind === 'num') {
-    if (card.value === 0) return endCard(s, player, playedArmy);
-    return startMoving(s, player, card.id, card.value!);
+  const args = action.args;
+  switch (card.kind) {
+    case 'num':
+      if (card.value === 0) return endCard(s, player, playedArmy);
+      if (card.value! <= 5) return startMoving(s, player, card.id, card.value!);
+      if (card.value === 6) return swapEffect(s, player, playedArmy, args);
+      if (card.value === 7) return freezeEffect(s, player, playedArmy, args);
+      if (card.value === 9) return tradeEffect(s, player, playedArmy);
+      return 'That card is not implemented yet.';
+    case 'skip': return shieldEffect(s, player, playedArmy, args);
+    case 'reverse': return reverseEffect(s, player, playedArmy);
+    case 'draw2': return penaltyEffect(s, player, playedArmy, 2);
+    case 'wild4': return penaltyEffect(s, player, playedArmy, 4);
+    default: return 'That card is not implemented yet.';
   }
-  return 'That card is not implemented yet.';
 }
+
+function swapEffect(s: GameState, player: PlayerId, playedArmy: Army, args?: EffectArgs): string | void {
+  const pairs = legalSwaps(s, player);
+  if (pairs.length > 0) {
+    if (args?.type !== 'swap') return 'Pick two of your pieces to swap.';
+    const [x, y] = [args.a, args.b].sort();
+    if (!pairs.some(([a, b]) => a === x && b === y)) return "Those two pieces can't be swapped.";
+    s.chess = swapSquares(s.chess, squareOfPiece(s.chess, x), squareOfPiece(s.chess, y));
+    log(s, player, 'swapped two of their pieces');
+  } else {
+    log(s, player, 'had no legal swap');
+  }
+  endCard(s, player, playedArmy);
+}
+
+function freezeEffect(s: GameState, player: PlayerId, playedArmy: Army, args?: EffectArgs): string | void {
+  const targets = legalFreezeTargets(s, player);
+  if (targets.length > 0) {
+    if (args?.type !== 'freeze' || !targets.includes(args.pieceId)) return 'Pick an enemy piece to freeze.';
+    const target = s.chess.board.find((p) => p?.id === args.pieceId)!;
+    s.effects.frozen = s.effects.frozen.filter((f) => f.pieceId !== target.id);
+    s.effects.frozen.push({ pieceId: target.id, army: target.army });
+    log(s, player, `froze an enemy ${PIECE_NAMES[target.type]}`);
+  }
+  endCard(s, player, playedArmy);
+}
+
+function shieldEffect(s: GameState, player: PlayerId, playedArmy: Army, args?: EffectArgs): string | void {
+  const targets = legalShieldTargets(s, player);
+  if (targets.length > 0) {
+    if (args?.type !== 'shield' || !targets.includes(args.pieceId)) return 'Pick one of your pieces (not the king) to shield.';
+    s.effects.shields = s.effects.shields.filter((sh) => sh.pieceId !== args.pieceId);
+    s.effects.shields.push({ pieceId: args.pieceId, owner: player });
+    log(s, player, 'shielded a piece');
+  }
+  endCard(s, player, playedArmy);
+}
+
+function tradeEffect(s: GameState, player: PlayerId, playedArmy: Army): void {
+  const other = opponentOf(s, player);
+  [s.hands[player], s.hands[other]] = [s.hands[other], s.hands[player]];
+  log(s, player, 'traded hands');
+  endCard(s, player, playedArmy);
+}
+
+function reverseEffect(s: GameState, player: PlayerId, playedArmy: Army): void {
+  s.seats = { w: s.seats.b, b: s.seats.w };
+  log(s, player, 'switched sides');
+  endCard(s, player, playedArmy);
+}
+
+function penaltyEffect(s: GameState, player: PlayerId, playedArmy: Army, count: number): void {
+  const other = opponentOf(s, player);
+  const drawn = drawCards(s, count);
+  s.hands[other].push(...drawn.cards);
+  s.drawPile = drawn.piles.drawPile;
+  s.discardPile = drawn.piles.discardPile;
+  s.seed = drawn.piles.seed;
+  s.effects.pendingSkip = other;
+  log(s, player, `made their opponent draw ${drawn.cards.length}`);
+  endCard(s, player, playedArmy);
+}
+
+const PIECE_NAMES = { p: 'pawn', n: 'knight', b: 'bishop', r: 'rook', q: 'queen', k: 'king' } as const;
 
 function startMoving(s: GameState, player: PlayerId, cardId: string, movesLeft: number): void {
   const army = armyOf(s, player);
