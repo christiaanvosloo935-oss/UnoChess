@@ -29,14 +29,14 @@ test('two players create, join, and play', async ({ browser }) => {
   // Alice (White) plays a multi-move card and pushes e2-e4, then stops early.
   await playMoveCard(alice, 'e2', 'e4');
   await expect(status(bob)).toHaveText('Your turn: play a card');
-  await expect(square(bob, 'e4')).toContainText('♟');
+  await expect(square(bob, 'e4').locator('img')).toHaveAttribute('alt', 'white pawn');
 
   // Bob (Black) answers with e7-e5.
   await playMoveCard(bob, 'e7', 'e5');
   await expect(status(alice)).toHaveText('Your turn: play a card');
 
   // Alice swaps her a1 rook and b1 knight.
-  const glyph = async (page: Page, name: string) => Array.from((await square(page, name).textContent()) ?? '')[0];
+  const glyph = (page: Page, name: string) => square(page, name).locator('img').getAttribute('alt');
   const rook = await glyph(alice, 'a1');
   const knight = await glyph(alice, 'b1');
   expect(rook).not.toBe(knight);
@@ -44,8 +44,8 @@ test('two players create, join, and play', async ({ browser }) => {
   await expect(status(alice)).toHaveText('Swap: pick two of your pieces');
   await square(alice, 'a1').click();
   await square(alice, 'b1').click();
-  await expect(square(alice, 'a1')).toHaveText(new RegExp(`^${knight}`));
-  await expect(square(alice, 'b1')).toHaveText(new RegExp(`^${rook}`));
+  await expect(square(alice, 'a1').locator('img')).toHaveAttribute('alt', knight!);
+  await expect(square(alice, 'b1').locator('img')).toHaveAttribute('alt', rook!);
   await expect(status(bob)).toHaveText('Your turn: play a card');
 
   // Refreshing keeps the seat, the hand and the board.
@@ -53,5 +53,5 @@ test('two players create, join, and play', async ({ browser }) => {
   await alice.reload();
   await expect(status(alice)).toHaveText("Bob's turn");
   expect(await alice.locator('[data-testid=hand] button').count()).toBe(handBefore);
-  await expect(square(alice, 'a1')).toHaveText(new RegExp(`^${knight}`));
+  await expect(square(alice, 'a1').locator('img')).toHaveAttribute('alt', knight!);
 });

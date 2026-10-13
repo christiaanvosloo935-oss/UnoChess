@@ -1,5 +1,6 @@
 import type { PieceType, PlayerView, PromotionType } from '@unochess/engine';
-import { GLYPH, PIECE_NAME } from './glyphs';
+import { PIECE_NAME } from './pieceNames';
+import { PieceIcon } from './PieceIcon';
 
 function Modal({ title, children, onCancel }: { title: string; children: React.ReactNode; onCancel: () => void }) {
   return (
@@ -18,7 +19,7 @@ export function PromotionPicker({ army, onPick, onCancel }: { army: 'w' | 'b'; o
     <Modal title="Promote to…" onCancel={onCancel}>
       {(['q', 'r', 'b', 'n'] as const).map((p) => (
         <button key={p} type="button" className="choice" onClick={() => onPick(p)} data-testid={`promote-${p}`}>
-          <span className={`piece ${army === 'w' ? 'white' : 'black'}`}>{GLYPH[p]}</span>
+          <PieceIcon army={army} type={p} />
           {PIECE_NAME[p]}
         </button>
       ))}
@@ -32,7 +33,7 @@ export function ShapeshiftPicker({ view, pieceId, onPick, onCancel }: { view: Pl
     <Modal title="Move like a…" onCancel={onCancel}>
       {types.map((t) => (
         <button key={t} type="button" className="choice" onClick={() => onPick(t)} data-testid={`shape-${t}`}>
-          <span className={`piece ${view.yourArmy === 'w' ? 'white' : 'black'}`}>{GLYPH[t]}</span>
+          <PieceIcon army={view.yourArmy} type={t} />
           {PIECE_NAME[t]}
         </button>
       ))}
@@ -48,14 +49,13 @@ export function RevivePicker({ view, onPick, onCancel }: { view: PlayerView; onP
     seen.add(key);
     return true;
   });
-  const colour = view.yourArmy === 'w' ? 'white' : 'black';
   return (
     <Modal title="Revive which piece?" onCancel={onCancel}>
       {choices.map((r) => {
         const type = r.asQueen ? 'q' : view.captured[view.yourArmy][r.capturedIndex];
         return (
           <button key={`${r.capturedIndex}:${r.asQueen}`} type="button" className="choice" onClick={() => onPick(r.capturedIndex, r.asQueen)} data-testid={`revive-${r.capturedIndex}-${r.asQueen ? 'q' : 'n'}`}>
-            <span className={`piece ${colour}`}>{GLYPH[type]}</span>
+            <PieceIcon army={view.yourArmy} type={type} />
             {r.asQueen ? 'Pawn → Queen' : PIECE_NAME[type]}
           </button>
         );

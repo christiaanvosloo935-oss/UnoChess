@@ -1,5 +1,5 @@
 import type { Army, PlayerView, Square } from '@unochess/engine';
-import { GLYPH } from './glyphs';
+import { PieceIcon } from './PieceIcon';
 
 interface Props {
   view: PlayerView;
@@ -38,11 +38,11 @@ export function Board({ view, selectable, targets, selected, onSquare }: Props) 
           return (
             <button key={sq} type="button" className={classes} onClick={() => onSquare(sq)} data-testid={`sq-${sq}`}>
               {piece && (
-                <span
-                  className={`piece ${piece.army === 'w' ? 'white' : 'black'}${shielded.has(piece.id) ? ' shielded' : ''}${moved.has(piece.id) ? ' moved' : ''}`}
-                >
-                  {GLYPH[piece.type]}
-                </span>
+                <PieceIcon
+                  army={piece.army}
+                  type={piece.type}
+                  className={`${shielded.has(piece.id) ? 'shielded' : ''} ${moved.has(piece.id) ? 'moved' : ''}`}
+                />
               )}
               {piece && frozen.has(piece.id) && <span className="badge frozen" title="Frozen">{'❄'}</span>}
               {rank === (yourArmy === 'w' ? 0 : 7) && <span className="coord file">{String.fromCharCode(97 + file)}</span>}

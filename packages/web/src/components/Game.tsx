@@ -5,7 +5,7 @@ import type { Action } from '@unochess/engine';
 import { Board } from './Board';
 import { CardBack, CardView } from './CardView';
 import { GameOver } from './GameOver';
-import { GLYPH } from './glyphs';
+import { PieceIcon } from './PieceIcon';
 import { PromotionPicker, RevivePicker, ShapeshiftPicker } from './Pickers';
 import { Toast } from './Toast';
 
@@ -114,7 +114,7 @@ export function Game({ view, room, send, rematch, lastError, errorKey, clearErro
         <div className="captured">
           {(['w', 'b'] as const).map((army) => (
             <div key={army} className="muted">
-              {army === 'w' ? 'White' : 'Black'} lost: {view.captured[army].map((t, i) => <span key={i} className={`piece small ${army === 'w' ? 'white' : 'black'}`}>{GLYPH[t]}</span>)}
+              {army === 'w' ? 'White' : 'Black'} lost: {view.captured[army].map((t, i) => <PieceIcon key={i} army={army} type={t} className="small" />)}
             </div>
           ))}
         </div>

@@ -49,3 +49,9 @@ Notes:
 - Free Render services go to sleep when idle and restart when visited. Games are kept in memory only,
   so a restart ends any game in progress. (Spec §1: no persistence in version 1.)
 - Games that nobody has touched for 24 hours are removed automatically.
+
+## Credits
+
+Chess piece artwork: the "Cburnett" set by Colin M.L. Burnett, from
+[Wikimedia Commons](https://commons.wikimedia.org/wiki/Category:SVG_chess_pieces)
+(used under the BSD / GPLv2+ / CC BY-SA 3.0 licences it is offered under). Files are in `packages/web/public/pieces/`.
