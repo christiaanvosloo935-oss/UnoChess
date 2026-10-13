@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { Game } from './components/Game';
 import { Home } from './components/Home';
 import { useGame } from './useGame';
 import { getNickname, getSeat, saveNickname } from './seat';
@@ -36,7 +37,7 @@ function NicknamePrompt({ onDone }: { onDone: (nick: string) => void }) {
 
 function GameRoute({ gameId, go }: { gameId: string; go: (path: string) => void }) {
   const [nickname, setNickname] = useState<string | null>(() => (getSeat(gameId) || getNickname() ? getNickname() : null));
-  const { conn } = useGame(gameId, nickname);
+  const { conn, send, rematch, lastError, errorKey, clearError } = useGame(gameId, nickname);
 
   useEffect(() => {
     if (conn.status === 'gone' && conn.reason === 'not-found') go('/?note=gone');
@@ -63,7 +64,7 @@ function GameRoute({ gameId, go }: { gameId: string; go: (path: string) => void 
       );
     }
     case 'playing':
-      return <main className="home"><p data-testid="status">Game started — board coming next.</p></main>;
+      return <Game view={conn.view} room={conn.room} send={send} rematch={rematch} lastError={lastError} errorKey={errorKey} clearError={clearError} />;
   }
 }
 
