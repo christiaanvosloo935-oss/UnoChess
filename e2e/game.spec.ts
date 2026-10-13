@@ -90,3 +90,89 @@ test('chat works while waiting in the lobby, and the input sits at the bottom of
   expect(box.y + box.height).toBeGreaterThan(700 - 90);
   expect(box.y + box.height).toBeLessThanOrEqual(700);
 });
+
+/** Records every Element.animate() call and every capture ghost the page creates. */
+const RECORDER = () => {
+  const w = window as unknown as { __anim: { calls: { alt: string; transform: boolean }[]; ghosts: number } };
+  w.__anim = { calls: [], ghosts: 0 };
+  const original = Element.prototype.animate;
+  Element.prototype.animate = function (this: Element, keyframes: Keyframe[] | PropertyIndexedKeyframes | null, options?: number | KeyframeAnimationOptions) {
+    const list = (Array.isArray(keyframes) ? keyframes : []) as Keyframe[];
+    w.__anim.calls.push({ alt: this.getAttribute('alt') ?? this.className.toString(), transform: list.some((k) => k.transform !== undefined) });
+    return original.call(this, keyframes, options);
+  };
+  new MutationObserver((records) => {
+    for (const r of records) for (const n of r.addedNodes) if ((n as Element).classList?.contains('ghost')) w.__anim.ghosts++;
+  }).observe(document, { childList: true, subtree: true });
+};
+const animCalls = (page: Page, alt: string) =>
+  page.evaluate((a) => (window as unknown as { __anim: { calls: { alt: string; transform: boolean }[] } }).__anim.calls.filter((c) => c.alt === a && c.transform).length, alt);
+const settle = (page: Page) => page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished)).then(() => undefined));
+
+async function twoPlayers(browser: import('@playwright/test').Browser, bobOptions: Parameters<import('@playwright/test').Browser['newContext']>[0] = {}) {
+  const alice = await (await browser.newContext()).newPage();
+  await alice.goto('/');
+  await alice.getByTestId('nickname').fill('Alice');
+  await alice.getByTestId('new-game').click();
+  const link = await alice.getByTestId('copy-link').inputValue();
+  const bobContext = await browser.newContext(bobOptions);
+  await bobContext.addInitScript(RECORDER);
+  const bob = await bobContext.newPage();
+  await bob.goto(link);
+  await bob.getByTestId('nickname').fill('Bob');
+  await bob.getByTestId('join-game').click();
+  await expect(status(alice)).toHaveText('Your turn: play a card');
+  return { alice, bob };
+}
+
+test('pieces slide, captures fade, and nothing is left behind', async ({ browser }) => {
+  const { alice, bob } = await twoPlayers(browser);
+  await expect(bob.getByTestId('chat-input')).toBeVisible();
+  expect(await animCalls(bob, 'white pawn')).toBe(0); // the first state is not animated
+
+  // White plays e2-e4 and d2-d4 with the 4-move card; Black's page animates both slides.
+  await alice.locator('[data-testid=hand] button', { hasText: 'moves' }).first().click();
+  await square(alice, 'e2').click();
+  await square(alice, 'e4').click();
+  await square(alice, 'd2').click();
+  await square(alice, 'd4').click();
+  await alice.getByTestId('done-moving').click();
+  await expect.poll(() => animCalls(bob, 'white pawn')).toBe(2);
+  await settle(bob);
+  await expect(square(bob, 'e4').locator('img')).toHaveAttribute('alt', 'white pawn');
+  await expect(square(bob, 'd4').locator('img')).toHaveAttribute('alt', 'white pawn');
+  await expect(square(bob, 'e2').locator('img')).toHaveCount(0);
+
+  // Black answers e7-e5, then White captures d4xe5 with the 1-move card.
+  await expect(status(bob)).toHaveText('Your turn: play a card');
+  await bob.locator('[data-testid=hand] button', { hasText: 'moves' }).first().click();
+  await square(bob, 'e7').click();
+  await square(bob, 'e5').click();
+  await bob.getByTestId('done-moving').click();
+  await expect(status(alice)).toHaveText('Your turn: play a card');
+  await alice.locator('[data-testid=hand] button', { hasText: '1 move' }).click();
+  await square(alice, 'd4').click();
+  await square(alice, 'e5').click();
+  await expect.poll(() => bob.evaluate(() => (window as unknown as { __anim: { ghosts: number } }).__anim.ghosts)).toBe(1);
+  await settle(bob);
+  await expect(bob.locator('.ghost')).toHaveCount(0);
+  await expect(square(bob, 'e5').locator('img')).toHaveCount(1);
+  await expect(square(bob, 'e5').locator('img')).toHaveAttribute('alt', 'white pawn');
+  await expect(square(bob, 'd4').locator('img')).toHaveCount(0);
+});
+
+test('no animation on a refresh, and none when the device asks for reduced motion', async ({ browser }) => {
+  const { alice, bob } = await twoPlayers(browser);
+  await bob.reload();
+  await expect(status(bob)).toHaveText("Alice's turn");
+  expect(await bob.evaluate(() => (window as unknown as { __anim: { calls: unknown[] } }).__anim.calls.length)).toBe(0);
+  await alice.close();
+
+  const calm = await twoPlayers(browser, { reducedMotion: 'reduce' });
+  await calm.alice.locator('[data-testid=hand] button', { hasText: 'moves' }).first().click();
+  await square(calm.alice, 'e2').click();
+  await square(calm.alice, 'e4').click();
+  await calm.alice.getByTestId('done-moving').click();
+  await expect(square(calm.bob, 'e4').locator('img')).toHaveAttribute('alt', 'white pawn');
+  expect(await animCalls(calm.bob, 'white pawn')).toBe(0);
+});
