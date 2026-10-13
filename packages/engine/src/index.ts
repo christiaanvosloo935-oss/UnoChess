@@ -6,3 +6,5 @@ export * from './deck.js';
 export * from './state.js';
 export * from './cards.js';
 export * from './game.js';
+export * from './view.js';
+export * from './protocol.js';
