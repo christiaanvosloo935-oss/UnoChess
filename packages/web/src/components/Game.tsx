@@ -3,6 +3,7 @@ import type { ChatMessage, PlayerView, PromotionType, RoomInfo, Square } from '@
 import { highlights, prompt, roleOf, step, type Selection, type UiEvent } from '../interaction';
 import type { Action } from '@unochess/engine';
 import { Board } from './Board';
+import { CardGuide } from './CardGuide';
 import { Chat } from './Chat';
 import { CardBack, CardView } from './CardView';
 import { GameOver } from './GameOver';
@@ -42,6 +43,7 @@ function statusText(view: PlayerView, room: RoomInfo, sel: Selection): string {
 
 export function Game({ view, room, send, rematch, chat, me, sendChat, lastError, errorKey, clearError }: Props) {
   const [sel, setSel] = useState<Selection>(IDLE);
+  const [tab, setTab] = useState<'chat' | 'cards'>('chat');
   const phaseKey = `${view.turn}:${view.phase.kind}:${view.phase.kind === 'moving' ? view.phase.movesLeft : ''}`;
   useEffect(() => setSel(IDLE), [phaseKey]);
 
@@ -122,7 +124,12 @@ export function Game({ view, room, send, rematch, chat, me, sendChat, lastError,
             </div>
           ))}
         </div>
-        <Chat messages={chat} me={me} onSend={sendChat} />
+        <div className="tabs" role="tablist">
+          <button type="button" role="tab" aria-selected={tab === 'chat'} className={tab === 'chat' ? 'active' : ''} onClick={() => setTab('chat')} data-testid="tab-chat">Chat</button>
+          <button type="button" role="tab" aria-selected={tab === 'cards'} className={tab === 'cards' ? 'active' : ''} onClick={() => setTab('cards')} data-testid="tab-cards">Cards</button>
+        </div>
+        <div hidden={tab !== 'chat'}><Chat messages={chat} me={me} onSend={sendChat} /></div>
+        <div hidden={tab !== 'cards'}><CardGuide hand={view.hand} /></div>
         <ol className="log" data-testid="log">
           {[...view.log].reverse().map((e, i) => (
             <li key={`${e.turn}-${i}`}>{e.text === 'Check!' ? 'Check!' : `${name(e.player)} ${e.text}`}</li>

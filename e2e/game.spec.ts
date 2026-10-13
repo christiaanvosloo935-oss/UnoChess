@@ -176,3 +176,40 @@ test('no animation on a refresh, and none when the device asks for reduced motio
   await expect(square(calm.bob, 'e4').locator('img')).toHaveAttribute('alt', 'white pawn');
   expect(await animCalls(calm.bob, 'white pawn')).toBe(0);
 });
+
+test('the card guide explains every card, marks the ones you hold, and keeps the chat', async ({ browser }) => {
+  const { alice } = await twoPlayers(browser);
+  await alice.getByTestId('chat-input').fill('still here');
+  await alice.getByTestId('chat-send').click();
+  await expect(alice.getByTestId('chat-list')).toContainText('still here');
+  await alice.getByTestId('chat-input').fill('draft message');
+
+  await alice.getByTestId('tab-cards').click();
+  await expect(alice.getByTestId('card-guide')).toBeVisible();
+  await expect(alice.getByTestId('guide-entry')).toHaveCount(11);
+  await expect(alice.getByTestId('guide-entry').filter({ hasText: 'Freeze' })).toContainText("can't move on their next turn");
+  // Seed 1 deals White: 6, 4, 7, 1, Reverse, +4, 8, so six different guide entries are marked as held.
+  await expect(alice.locator('[data-testid=guide-entry].held')).toHaveCount(6);
+  await expect(alice.getByTestId('guide-entry').filter({ hasText: 'Trade' })).not.toHaveClass(/held/);
+  await expect(alice.getByTestId('chat-list')).toBeHidden();
+
+  await alice.getByTestId('tab-chat').click();
+  await expect(alice.getByTestId('chat-list')).toContainText('still here');
+  await expect(alice.getByTestId('chat-input')).toHaveValue('draft message');
+  await expect(alice.getByTestId('card-guide')).toBeHidden();
+});
+
+test('the guide is also available from the home page and the waiting room', async ({ page }) => {
+  await page.goto('/');
+  await page.getByTestId('home-guide').click();
+  await expect(page.getByTestId('guide-entry')).toHaveCount(11);
+  await page.getByTestId('guide-close').click();
+  await expect(page.getByTestId('card-guide')).toBeHidden();
+
+  await page.getByTestId('nickname').fill('Alice');
+  await page.getByTestId('new-game').click();
+  await page.getByTestId('copy-link').waitFor();
+  await page.getByTestId('home-guide').click();
+  await expect(page.getByTestId('guide-entry')).toHaveCount(11);
+  await expect(page.locator('[data-testid=guide-entry].held')).toHaveCount(0);
+});
