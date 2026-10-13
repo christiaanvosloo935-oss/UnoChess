@@ -1,10 +1,10 @@
-import { applyChessMove, isInCheck, legalMoves } from './chess.js';
-import { legalFreezeTargets, legalShieldTargets, legalSwaps, playableCards, squareOfPiece, swapSquares } from './cards.js';
+import { applyChessMove, isInCheck, legalMoves, movesAs } from './chess.js';
+import { legalFreezeTargets, legalRevives, legalShapeshifts, legalShieldTargets, legalSwaps, playableCards, squareOfPiece, swapSquares } from './cards.js';
 import { buildDeck, drawCards } from './deck.js';
 import { fromFen, START_FEN } from './fen.js';
 import { shuffle } from './rng.js';
 import { armyOf, ctxFor, inCheckNow, opponentOf } from './state.js';
-import type { Action, ApplyResult, Army, Card, EffectArgs, GameState, PlayerId } from './types.js';
+import type { Action, ApplyResult, Army, Card, EffectArgs, GameState, Move, PlayerId } from './types.js';
 
 export { armyOf, inCheckNow, opponentOf };
 
@@ -95,13 +95,14 @@ function playCard(s: GameState, player: PlayerId, action: Extract<Action, { type
       if (card.value! <= 5) return startMoving(s, player, card.id, card.value!);
       if (card.value === 6) return swapEffect(s, player, playedArmy, args);
       if (card.value === 7) return freezeEffect(s, player, playedArmy, args);
+      if (card.value === 8) return shapeshiftEffect(s, player, playedArmy, args);
       if (card.value === 9) return tradeEffect(s, player, playedArmy);
       return 'That card is not implemented yet.';
     case 'skip': return shieldEffect(s, player, playedArmy, args);
     case 'reverse': return reverseEffect(s, player, playedArmy);
     case 'draw2': return penaltyEffect(s, player, playedArmy, 2);
     case 'wild4': return penaltyEffect(s, player, playedArmy, 4);
-    default: return 'That card is not implemented yet.';
+    case 'wild': return reviveEffect(s, player, playedArmy, args);
   }
 }
 
@@ -194,12 +195,7 @@ function makeMove(s: GameState, player: PlayerId, action: Extract<Action, { type
   const rookId = move.castle
     ? s.chess.board[(action.from >> 3) * 8 + (move.castle === 'k' ? 7 : 0)]!.id
     : null;
-  const result = applyChessMove(s.chess, move, s.turn);
-  s.chess = result.chess;
-  if (result.captured) {
-    s.captured[result.captured.army].push(result.captured.type);
-    log(s, player, `captured a ${result.captured.type === 'p' ? 'pawn' : result.captured.type}`);
-  }
+  commitMove(s, player, move);
   phase.moved.push(piece.id);
   if (rookId) phase.moved.push(rookId);
   phase.movesLeft -= 1;
@@ -213,6 +209,58 @@ function makeMove(s: GameState, player: PlayerId, action: Extract<Action, { type
   if (phase.movesLeft === 0 || legalMoves(s.chess, army, ctxFor(s, army, phase.moved)).length === 0) {
     return endCard(s, player, army);
   }
+}
+
+/** Applies a chess move to the game state and records any capture. */
+function commitMove(s: GameState, player: PlayerId, move: Move): void {
+  const result = applyChessMove(s.chess, move, s.turn);
+  s.chess = result.chess;
+  if (result.captured) {
+    s.captured[result.captured.army].push(result.captured.type);
+    log(s, player, `captured a ${PIECE_NAMES[result.captured.type]}`);
+  }
+}
+
+function shapeshiftEffect(s: GameState, player: PlayerId, playedArmy: Army, args?: EffectArgs): string | void {
+  const army = armyOf(s, player);
+  const options = legalShapeshifts(s, player);
+  if (options.length === 0) {
+    log(s, player, 'had no legal shapeshift');
+    return endCard(s, player, playedArmy);
+  }
+  if (args?.type !== 'shapeshift') return 'Pick a piece, a piece type to borrow, and a destination.';
+  const matches = options.filter((o) => o.pieceId === args.pieceId && o.as === args.as && o.to === args.to);
+  if (matches.length === 0) return "That piece can't move like that.";
+  if (matches.some((o) => o.promotion) && !args.promotion) return 'Choose a promotion piece';
+  const from = squareOfPiece(s.chess, args.pieceId);
+  const move = movesAs(s.chess, from, args.as, ctxFor(s, army)).find(
+    (m) => m.to === args.to && m.promotion === args.promotion,
+  );
+  if (!move) return "That piece can't move like that.";
+  log(s, player, `shapeshifted a ${PIECE_NAMES[s.chess.board[from]!.type]} into a ${PIECE_NAMES[args.as]}`);
+  commitMove(s, player, move);
+  if (isInCheck(s.chess, army === 'w' ? 'b' : 'w')) log(s, player, 'Check!');
+  endCard(s, player, playedArmy);
+}
+
+function reviveEffect(s: GameState, player: PlayerId, playedArmy: Army, args?: EffectArgs): string | void {
+  const army = armyOf(s, player);
+  const options = legalRevives(s, player);
+  if (options.length > 0) {
+    if (args?.type !== 'revive') return 'Pick a captured piece and an empty square in your first two rows.';
+    const option = options.find(
+      (o) => o.capturedIndex === args.capturedIndex && o.square === args.square && o.asQueen === !!args.asQueen,
+    );
+    if (!option) return "That piece can't be revived there.";
+    const [type] = s.captured[army].splice(option.capturedIndex, 1);
+    const board = s.chess.board.slice();
+    board[option.square] = { id: `r${s.nextPieceId++}`, type: option.asQueen ? 'q' : type, army };
+    s.chess = { ...s.chess, board };
+    log(s, player, `revived a ${PIECE_NAMES[option.asQueen ? 'q' : type]}`);
+  } else {
+    log(s, player, 'had nothing to revive');
+  }
+  endCard(s, player, playedArmy);
 }
 
 function doneMoving(s: GameState, player: PlayerId): string | void {
