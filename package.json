@@ -1,0 +1,19 @@
+{
+  "name": "unochess",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "test": "npm test --workspaces --if-present",
+    "build": "npm run build -w @unochess/engine && npm run build -w @unochess/web && npm run build -w @unochess/server",
+    "start": "node packages/server/dist/index.js",
+    "e2e": "playwright test -c e2e/playwright.config.ts"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.0",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  }
+}
