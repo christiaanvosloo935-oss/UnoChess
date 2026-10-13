@@ -1,10 +1,13 @@
 import { randomBytes, randomInt, randomUUID, timingSafeEqual } from 'node:crypto';
 import {
   apply, createGame, viewFor,
-  type Action, type GameState, type PlayerId, type RoomInfo, type ServerMessage,
+  type Action, type ChatMessage, type GameState, type PlayerId, type RoomInfo, type ServerMessage,
 } from '@unochess/engine';
 
 const ID_CHARS = 'abcdefghjkmnpqrstuvwxyz23456789';
+export const MAX_CHAT_LENGTH = 200;
+const CHAT_BURST = 5;
+const CHAT_WINDOW_MS = 3000;
 
 export interface Seat {
   playerId: PlayerId;
@@ -47,6 +50,7 @@ export class Rooms {
   private listeners = new Set<(gameId: string) => void>();
   private seed: () => number;
   private now: () => number;
+  private recentChats = new Map<PlayerId, number[]>();
 
   constructor(opts: RoomsOptions = {}) {
     this.seed = opts.seed ?? defaultSeed;
@@ -146,6 +150,23 @@ export class Rooms {
     }
     this.emit(gameId);
     return { ok: true };
+  }
+
+  /** Validates a chat line. Nothing is stored: the caller passes the returned message on to the players' sockets. */
+  chat(gameId: string, playerId: PlayerId, rawText: string): { ok: true; message: ChatMessage } | { ok: false; error: string } {
+    const room = this.rooms.get(gameId);
+    const seat = room?.seats.find((s) => s.playerId === playerId);
+    if (!room || !seat) return { ok: false, error: 'Unknown game.' };
+    const text = rawText.trim();
+    if (text.length === 0) return { ok: false, error: 'Type a message first.' };
+    if (text.length > MAX_CHAT_LENGTH) return { ok: false, error: `Messages can be at most ${MAX_CHAT_LENGTH} characters.` };
+    const now = this.now();
+    const recent = (this.recentChats.get(playerId) ?? []).filter((t) => now - t < CHAT_WINDOW_MS);
+    if (recent.length >= CHAT_BURST) return { ok: false, error: 'Slow down a little.' };
+    recent.push(now);
+    this.recentChats.set(playerId, recent);
+    room.lastActivity = now;
+    return { ok: true, message: { playerId, from: seat.nickname, text } };
   }
 
   cleanup(maxIdleMs: number): void {

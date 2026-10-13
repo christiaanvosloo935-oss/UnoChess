@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { Action, PlayerView, RoomInfo, ServerMessage } from '@unochess/engine';
+import type { Action, ChatMessage, PlayerView, RoomInfo, ServerMessage } from '@unochess/engine';
 import { getSeat, setSeat } from './seat';
 
 export type GameConn =
@@ -9,10 +9,13 @@ export type GameConn =
   | { status: 'gone'; reason: 'not-found' | 'full' };
 
 const BACKOFF_MS = [1000, 2000, 4000, 8000];
+const CHAT_KEEP = 100;
 
 export function useGame(gameId: string, nickname: string | null) {
   const [conn, setConn] = useState<GameConn>({ status: 'connecting' });
   const [error, setError] = useState<{ text: string; n: number } | null>(null);
+  const [chat, setChat] = useState<ChatMessage[]>([]);
+  const [me, setMe] = useState<string | null>(null);
   const socket = useRef<WebSocket | null>(null);
 
   useEffect(() => {
@@ -32,7 +35,8 @@ export function useGame(gameId: string, nickname: string | null) {
       ws.onmessage = (ev) => {
         const msg = JSON.parse(String(ev.data)) as ServerMessage;
         switch (msg.type) {
-          case 'joined': setSeat(gameId, msg.seatToken); break;
+          case 'joined': setSeat(gameId, msg.seatToken); setMe(msg.playerId); break;
+          case 'chat': setChat((c) => [...c, msg.message].slice(-CHAT_KEEP)); break;
           case 'lobby': setConn({ status: 'lobby', names: msg.names }); break;
           case 'state': setConn({ status: 'playing', view: msg.view, room: msg.room }); break;
           case 'error': setError((e) => ({ text: msg.message, n: (e?.n ?? 0) + 1 })); break;
@@ -62,7 +66,8 @@ export function useGame(gameId: string, nickname: string | null) {
   }, []);
   const send = useCallback((action: Action) => sendRaw({ type: 'action', action }), [sendRaw]);
   const rematch = useCallback(() => sendRaw({ type: 'rematch' }), [sendRaw]);
+  const sendChat = useCallback((text: string) => sendRaw({ type: 'chat', text }), [sendRaw]);
   const clearError = useCallback(() => setError(null), []);
 
-  return { conn, send, rematch, lastError: error?.text ?? null, errorKey: error?.n ?? 0, clearError };
+  return { conn, send, rematch, chat, me, sendChat, lastError: error?.text ?? null, errorKey: error?.n ?? 0, clearError };
 }

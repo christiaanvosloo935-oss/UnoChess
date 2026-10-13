@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import type { PlayerView, PromotionType, RoomInfo, Square } from '@unochess/engine';
+import type { ChatMessage, PlayerView, PromotionType, RoomInfo, Square } from '@unochess/engine';
 import { highlights, prompt, roleOf, step, type Selection, type UiEvent } from '../interaction';
 import type { Action } from '@unochess/engine';
 import { Board } from './Board';
+import { Chat } from './Chat';
 import { CardBack, CardView } from './CardView';
 import { GameOver } from './GameOver';
 import { PieceIcon } from './PieceIcon';
@@ -16,6 +17,9 @@ interface Props {
   room: RoomInfo;
   send: (a: Action) => void;
   rematch: () => void;
+  chat: ChatMessage[];
+  me: string | null;
+  sendChat: (text: string) => void;
   lastError: string | null;
   errorKey: number;
   clearError: () => void;
@@ -36,7 +40,7 @@ function statusText(view: PlayerView, room: RoomInfo, sel: Selection): string {
   return 'Your turn: play a card';
 }
 
-export function Game({ view, room, send, rematch, lastError, errorKey, clearError }: Props) {
+export function Game({ view, room, send, rematch, chat, me, sendChat, lastError, errorKey, clearError }: Props) {
   const [sel, setSel] = useState<Selection>(IDLE);
   const phaseKey = `${view.turn}:${view.phase.kind}:${view.phase.kind === 'moving' ? view.phase.movesLeft : ''}`;
   useEffect(() => setSel(IDLE), [phaseKey]);
@@ -118,6 +122,7 @@ export function Game({ view, room, send, rematch, lastError, errorKey, clearErro
             </div>
           ))}
         </div>
+        <Chat messages={chat} me={me} onSend={sendChat} />
         <ol className="log" data-testid="log">
           {[...view.log].reverse().map((e, i) => (
             <li key={`${e.turn}-${i}`}>{e.text === 'Check!' ? 'Check!' : `${name(e.player)} ${e.text}`}</li>

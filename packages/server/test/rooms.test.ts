@@ -67,6 +67,46 @@ describe('Rooms', () => {
     expect(rooms.get(a.gameId)).toBeUndefined();
   });
 
+  describe('chat', () => {
+    const setup = (opts: ConstructorParameters<typeof Rooms>[0] = {}) => {
+      const rooms = new Rooms(opts);
+      const a = rooms.create('Alice');
+      return { rooms, a };
+    };
+
+    it('returns the trimmed message with the sender’s nickname, even before the opponent joins', () => {
+      const { rooms, a } = setup();
+      expect(rooms.chat(a.gameId, a.playerId, '  hello there  ')).toEqual({
+        ok: true,
+        message: { playerId: a.playerId, from: 'Alice', text: 'hello there' },
+      });
+    });
+
+    it('rejects empty, over-long and foreign messages', () => {
+      const { rooms, a } = setup();
+      expect(rooms.chat(a.gameId, a.playerId, '   ')).toMatchObject({ ok: false });
+      expect(rooms.chat(a.gameId, a.playerId, 'x'.repeat(201))).toMatchObject({ ok: false, error: expect.stringMatching(/200/) });
+      expect(rooms.chat(a.gameId, a.playerId, 'x'.repeat(200))).toMatchObject({ ok: true });
+      expect(rooms.chat(a.gameId, 'stranger', 'hi')).toMatchObject({ ok: false });
+      expect(rooms.chat('zzzzzz', a.playerId, 'hi')).toMatchObject({ ok: false });
+    });
+
+    it('rate limits a flood but lets the sender talk again later', () => {
+      let now = 0;
+      const { rooms, a } = setup({ now: () => now });
+      for (let i = 0; i < 5; i++) expect(rooms.chat(a.gameId, a.playerId, `m${i}`)).toMatchObject({ ok: true });
+      expect(rooms.chat(a.gameId, a.playerId, 'too fast')).toMatchObject({ ok: false, error: expect.stringMatching(/slow/i) });
+      now = 3500;
+      expect(rooms.chat(a.gameId, a.playerId, 'later')).toMatchObject({ ok: true });
+    });
+
+    it('does not keep messages anywhere in the room', () => {
+      const { rooms, a } = setup();
+      rooms.chat(a.gameId, a.playerId, 'secret plans');
+      expect(JSON.stringify(rooms.get(a.gameId), (_k, v) => (v instanceof Set ? [...v] : v))).not.toContain('secret plans');
+    });
+  });
+
   it('reports presence through snapshots', () => {
     const rooms = new Rooms();
     const a = rooms.create('Alice');

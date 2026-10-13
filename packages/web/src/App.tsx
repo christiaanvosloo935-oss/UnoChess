@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { Chat } from './components/Chat';
 import { Game } from './components/Game';
 import { Home } from './components/Home';
 import { useGame } from './useGame';
@@ -37,7 +38,7 @@ function NicknamePrompt({ onDone }: { onDone: (nick: string) => void }) {
 
 function GameRoute({ gameId, go }: { gameId: string; go: (path: string) => void }) {
   const [nickname, setNickname] = useState<string | null>(() => (getSeat(gameId) || getNickname() ? getNickname() : null));
-  const { conn, send, rematch, lastError, errorKey, clearError } = useGame(gameId, nickname);
+  const { conn, send, rematch, chat, me, sendChat, lastError, errorKey, clearError } = useGame(gameId, nickname);
 
   useEffect(() => {
     if (conn.status === 'gone' && conn.reason === 'not-found') go('/?note=gone');
@@ -60,11 +61,12 @@ function GameRoute({ gameId, go }: { gameId: string; go: (path: string) => void 
           <p>Send them this link:</p>
           <input readOnly value={link} data-testid="copy-link" onFocus={(e) => e.target.select()} />
           <button onClick={() => navigator.clipboard?.writeText(link)}>Copy link</button>
+          <Chat messages={chat} me={me} onSend={sendChat} />
         </main>
       );
     }
     case 'playing':
-      return <Game view={conn.view} room={conn.room} send={send} rematch={rematch} lastError={lastError} errorKey={errorKey} clearError={clearError} />;
+      return <Game view={conn.view} room={conn.room} send={send} rematch={rematch} chat={chat} me={me} sendChat={sendChat} lastError={lastError} errorKey={errorKey} clearError={clearError} />;
   }
 }
 

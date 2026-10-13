@@ -31,6 +31,8 @@ function parse(raw: string): ClientMessage | null {
       return { type: 'action', action: m.action as Action };
     case 'rematch':
       return { type: 'rematch' };
+    case 'chat':
+      return typeof m.text === 'string' ? { type: 'chat', text: m.text } : null;
     default:
       return null;
   }
@@ -76,6 +78,12 @@ export function attachWebSocket(server: Server, rooms: Rooms): WebSocketServer {
         return;
       }
       if (!me) return send(ws, { type: 'error', message: 'Join a game first.' });
+      if (msg.type === 'chat') {
+        const chat = rooms.chat(me.gameId, me.playerId, msg.text);
+        if (!chat.ok) return send(ws, { type: 'error', message: chat.error });
+        for (const client of clients.get(me.gameId) ?? []) send(client.ws, { type: 'chat', message: chat.message });
+        return;
+      }
       const outcome = msg.type === 'action' ? rooms.act(me.gameId, me.playerId, msg.action) : rooms.rematch(me.gameId, me.playerId);
       if (!outcome.ok) send(ws, { type: 'error', message: outcome.error });
     });

@@ -87,6 +87,12 @@ async function startGame(port: number) {
   return { a, b, ...body };
 }
 
+/** The seat token of the n-th seat, read straight from the room (tests only). */
+async function createSeatToken(server: Started, gameId: string, which: 'A' | 'B'): Promise<string> {
+  const room = server.rooms.get(gameId)!;
+  return room.seats[which === 'A' ? 0 : 1].token;
+}
+
 const action = (a: Action) => ({ type: 'action', action: a });
 const playMoveCard = async (c: Client) => {
   const view = await c.view((v) => v.options.cards.length > 0);
@@ -151,6 +157,50 @@ describe('websocket game', () => {
     expect(c.ws.readyState).toBe(WebSocket.OPEN);
     const ok = await createViaHttp(server.port);
     expect(ok.status).toBe(200);
+  });
+
+  it('passes chat messages between the two players only, and keeps no history', async () => {
+    const server = await boot();
+    const { a, b, gameId } = await startGame(server.port);
+    const outsider = await Client.connect(server.port);
+    a.send({ type: 'chat', text: '  hi Bob <b>!</b> ' });
+    const chat = (m: ServerMessage) => m.type === 'chat';
+    const toA = await a.waitFor<Extract<ServerMessage, { type: 'chat' }>>(chat);
+    const toB = await b.waitFor<Extract<ServerMessage, { type: 'chat' }>>(chat);
+    expect(toB.message).toEqual({ playerId: toA.message.playerId, from: 'Alice', text: 'hi Bob <b>!</b>' });
+    expect(toA.message.text).toBe('hi Bob <b>!</b>');
+    expect(outsider.messages).toEqual([]);
+    const late = await Client.connect(server.port);
+    late.send({ type: 'join', gameId, nickname: 'Bob', seatToken: (await createSeatToken(server, gameId, 'B')) });
+    await late.view();
+    expect(late.messages.some(chat)).toBe(false);
+  });
+
+  it('lets the creator chat while waiting in the lobby', async () => {
+    const server = await boot();
+    const { body } = await createViaHttp(server.port);
+    const a = await Client.connect(server.port);
+    a.send({ type: 'join', gameId: body.gameId, nickname: 'Alice', seatToken: body.seatToken });
+    await a.waitFor((m) => m.type === 'lobby');
+    a.send({ type: 'chat', text: 'anyone there?' });
+    expect(await a.waitFor((m) => m.type === 'chat')).toMatchObject({ message: { from: 'Alice', text: 'anyone there?' } });
+  });
+
+  it('answers bad chat messages with an error and keeps the socket open', async () => {
+    const server = await boot();
+    const { a } = await startGame(server.port);
+    for (const [payload, expected] of [
+      [{ type: 'chat' }, 'Bad message'],
+      [{ type: 'chat', text: 5 }, 'Bad message'],
+      [{ type: 'chat', text: '' }, 'Type a message first.'],
+      [{ type: 'chat', text: 'x'.repeat(201) }, 'Messages can be at most 200 characters.'],
+    ] as const) {
+      const before = a.messages.length;
+      a.send(payload);
+      const err = await a.waitFor<Extract<ServerMessage, { type: 'error' }>>((m) => m.type === 'error', before);
+      expect(err.message).toBe(expected);
+    }
+    expect(a.ws.readyState).toBe(WebSocket.OPEN);
   });
 
   it('survives protocol-level garbage (oversized and non-UTF-8 frames)', async () => {
