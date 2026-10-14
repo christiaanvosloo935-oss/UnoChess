@@ -272,6 +272,16 @@ describe('websocket game', () => {
   });
 });
 
+describe('server settings for Render', () => {
+  it('listens on all IPv4 interfaces and keeps idle connections open longer than Render\'s proxy does', async () => {
+    const started = await boot();
+    const address = started.server.address() as { address: string; family: string };
+    expect(address.address).toBe('0.0.0.0');
+    expect(started.server.keepAliveTimeout).toBeGreaterThanOrEqual(120_000);
+    expect(started.server.headersTimeout).toBeGreaterThan(started.server.keepAliveTimeout);
+  });
+});
+
 describe('http', () => {
   it('answers malformed request lines with 400 and keeps running', async () => {
     const server = await boot();
