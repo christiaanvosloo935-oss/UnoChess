@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import type { ChatMessage } from '@unochess/engine';
+import type { ChatMessage } from '@isachess/engine';
 
 const MAX_LENGTH = 200;
 

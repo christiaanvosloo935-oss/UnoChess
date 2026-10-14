@@ -1,8 +1,8 @@
-# Uno Chess Online Implementation Plan
+# IsaChess Online Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** A browser game where two friends play Uno Chess against each other by sharing a link. A Node server enforces every house rule and keeps both hands secret.
+**Goal:** A browser game where two friends play IsaChess against each other by sharing a link. A Node server enforces every house rule and keeps both hands secret.
 
 **Architecture:** An npm-workspaces TypeScript monorepo with three packages:
 - `engine`: pure rules logic plus the shared protocol types.
@@ -13,12 +13,12 @@ The server validates every action with `engine.apply` and sends each player only
 
 **Tech Stack:** Node 22, TypeScript (strict, ESM), Vitest, `ws`, React 19, Vite, Playwright (e2e).
 
-**Spec:** `docs/superpowers/specs/2026-10-13-uno-chess-online-design.md`. Read §5 before any engine task. Every numbered clarification there is binding.
+**Spec:** `docs/superpowers/specs/2026-10-13-isachess-online-design.md`. Read §5 before any engine task. Every numbered clarification there is binding.
 
 ## Global Constraints
 
 - Node 22, npm workspaces, `"type": "module"` everywhere, TypeScript `strict: true`.
-- Package names: `@unochess/engine`, `@unochess/server`, `@unochess/web`.
+- Package names: `@isachess/engine`, `@isachess/server`, `@isachess/web`.
 - The engine has no runtime dependencies and does no I/O. All randomness comes from a seeded RNG stored in state, so a state is plain JSON and serialisable.
 - `apply` never mutates its input state.
 - Deck: 108 cards. That is one 0 per colour, two each of 1–9 per colour, two Skip, two Reverse and two Draw Two per colour, four Wild and four Wild Draw Four. Each player is dealt 7.
@@ -95,7 +95,7 @@ e2e/
   playwright.config.ts, game.spec.ts
 ```
 
-**Engine resolution:** `@unochess/engine`'s `package.json` exports `./dist/index.js` (built with `tsc`). The Vitest configs for server and web, and `vite.config.ts`, alias `@unochess/engine` to `../engine/src/index.ts`, so development and tests don't need an engine build.
+**Engine resolution:** `@isachess/engine`'s `package.json` exports `./dist/index.js` (built with `tsc`). The Vitest configs for server and web, and `vite.config.ts`, alias `@isachess/engine` to `../engine/src/index.ts`, so development and tests don't need an engine build.
 
 ---
 
@@ -125,7 +125,7 @@ export interface Move { from: Square; to: Square; promotion?: PromotionType; cas
 
 - [ ] **Step 1: Scaffold the workspace.** Root scripts:
   - `test`: `npm test --workspaces --if-present`
-  - `build`: `npm run build -w @unochess/engine && npm run build -w @unochess/web && npm run build -w @unochess/server`
+  - `build`: `npm run build -w @isachess/engine && npm run build -w @isachess/web && npm run build -w @isachess/server`
   - `start`: `node packages/server/dist/index.js`
 
   Install `typescript` and `vitest` as root devDependencies.
@@ -133,9 +133,9 @@ export interface Move { from: Square; to: Square; promotion?: PromotionType; cas
   - `fen roundtrips START_FEN and Kiwipete`, where Kiwipete is `r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1`. `toFen(fromFen(x))` must equal `x` with the clocks normalised.
   - `fromFen(START_FEN)` gives a white king (`type 'k'`, `army 'w'`) at square 4 and all castling rights true.
   - `shuffle is deterministic for a seed and is a permutation`: the same seed gives equal output; sorted output equals sorted input.
-- [ ] **Step 3: Run** `npm test -w @unochess/engine`. Expected: FAIL (modules missing).
+- [ ] **Step 3: Run** `npm test -w @isachess/engine`. Expected: FAIL (modules missing).
 - [ ] **Step 4: Implement** `types.ts`, `rng.ts` and `fen.ts`. Export everything from `index.ts`.
-- [ ] **Step 5: Run** `npm test -w @unochess/engine`. Expected: PASS.
+- [ ] **Step 5: Run** `npm test -w @isachess/engine`. Expected: PASS.
 - [ ] **Step 6: Commit** `chore: scaffold monorepo and engine core types`.
 
 ---
@@ -235,7 +235,7 @@ Add `Colour`, `CardKind` and `Card` to `types.ts`.
 - [ ] **Step 2: Run.** Expected: FAIL.
 - [ ] **Step 3: Implement** `buildDeck` and `drawCards`.
 - [ ] **Step 4: Run.** Expected: PASS.
-- [ ] **Step 5: Commit** `feat(engine): uno deck and drawing with reshuffle`.
+- [ ] **Step 5: Commit** `feat(engine): card deck and drawing with reshuffle`.
 
 ---
 
@@ -506,7 +506,7 @@ These replace the spec's separate `presence` message: presence travels inside `r
   - `log events never mention card contents of hands` (after a Trade Hands, the event text has no card IDs).
 - [ ] **Step 2: Run.** Expected: FAIL.
 - [ ] **Step 3: Implement.** Export `view.ts` and `protocol.ts` from `index.ts`. Add the engine `build` script (`tsc -p tsconfig.json` → `dist`).
-- [ ] **Step 4: Run** `npm test -w @unochess/engine && npm run build -w @unochess/engine`. Expected: PASS, and `dist/index.js` exists.
+- [ ] **Step 4: Run** `npm test -w @isachess/engine && npm run build -w @isachess/engine`. Expected: PASS, and `dist/index.js` exists.
 - [ ] **Step 5: Commit** `feat(engine): player view, legal options, protocol types`.
 
 ---
@@ -546,7 +546,7 @@ export function start(port: number, opts?: { staticDir?: string; seed?: () => nu
   - A `join` with a matching token reattaches to that seat.
   - Otherwise the first `join` without a token takes the free seat, and the game starts with `createGame(seed(), creator, joiner)`.
   - Any further join returns `full`.
-- **Seed:** `opts.seed` if given, otherwise the env var `UNOCHESS_SEED` (a number) if set, otherwise `crypto.randomInt(2**31)`.
+- **Seed:** `opts.seed` if given, otherwise the env var `ISACHESS_SEED` (a number) if set, otherwise `crypto.randomInt(2**31)`.
 - **Rematch:** when both players have voted, start `createGame(seed(), previous players[1], previous players[0])`.
 - **WebSockets** are attached at path `/ws`. On every change, each socket attached to a seat gets its own `state`:
   - after a successful `act`
@@ -579,7 +579,7 @@ export function start(port: number, opts?: { staticDir?: string; seed?: () => nu
     - `malformed messages get "Bad message" and socket stays open` (send `"{"`, `{"type":"nope"}`, and `{"type":"action"}`).
     - `refresh mid-turn restores moving phase`: A plays a 2+ card and makes one move, closes the socket, then rejoins with the token. The new `view.phase` is `moving` with the same `movesLeft`.
     - `two tabs on one seat both receive state`.
-- [ ] **Step 2: Run** `npm test -w @unochess/server`. Expected: FAIL.
+- [ ] **Step 2: Run** `npm test -w @isachess/server`. Expected: FAIL.
 - [ ] **Step 3: Implement** `rooms.ts`, `http.ts`, `ws.ts` and `index.ts`. Add the `build` script (`tsc` → `dist`) and the `dev` script (`tsx watch src/index.ts`).
 - [ ] **Step 4: Run.** Expected: PASS.
 - [ ] **Step 5: Commit** `feat(server): rooms, http api, websocket game protocol`.
@@ -610,7 +610,7 @@ export function useGame(gameId: string, nickname: string | null): {
 ```
 
 **Behaviour:**
-- **Vite:** the dev server proxies `/api` and `/ws` (with `ws: true`) to `localhost:3000`, and aliases `@unochess/engine` to its source.
+- **Vite:** the dev server proxies `/api` and `/ws` (with `ws: true`) to `localhost:3000`, and aliases `@isachess/engine` to its source.
 - **Home (`/`):** a nickname field (saved in `localStorage` under `uc_nick`) and a **New game** button. It calls `createGame`, then `setSeat`, then navigates to `/g/:id`.
 - **Game route (`/g/:id`):**
   - If there's no seat cookie and no saved nickname, ask for a nickname first.
@@ -621,7 +621,7 @@ export function useGame(gameId: string, nickname: string | null): {
 - Routing uses `location.pathname` and `history.pushState`. There is no router library.
 
 - [ ] **Step 1: Implement** the files above. There is no unit test for this glue; it's covered by the e2e test in Task 11.
-- [ ] **Step 2: Verify:** run `npm run build -w @unochess/web` and expect success. Then run `npm run dev -w @unochess/server` and `npm run dev -w @unochess/web`, open two browser contexts with Playwright (or by hand), create a game and join it. Both should leave the lobby.
+- [ ] **Step 2: Verify:** run `npm run build -w @isachess/web` and expect success. Then run `npm run dev -w @isachess/server` and `npm run dev -w @isachess/web`, open two browser contexts with Playwright (or by hand), create a game and join it. Both should leave the lobby.
 - [ ] **Step 3: Commit** `feat(web): home page, routing, game socket hook`.
 
 ---
@@ -667,7 +667,7 @@ export function highlights(view: PlayerView, sel: Selection): { selectable: Squa
 
 **Screen layout:**
 - The board is oriented to `view.yourArmy`, with pieces as Unicode glyphs and a ❄ badge for frozen and a ring for shielded pieces.
-- The hand is a row of Uno-style cards: coloured, with a value or symbol. Wilds are dark, with a four-colour oval.
+- The hand is a row of coloured cards with a value or symbol. Special cards are dark.
 - The opponent's card count is shown face down, along with the draw pile count and the top discard.
 - The status line text:
   - `"Your turn: play a card"`
@@ -687,9 +687,9 @@ export function highlights(view: PlayerView, sel: Selection): { selectable: Squa
   - `moving phase: piece then target sends move; promotion target asks needPromotion`.
   - `effect card with empty options sends playCard without args`.
   - `cancel returns to idle`.
-- [ ] **Step 2: Run** `npm test -w @unochess/web`. Expected: FAIL.
+- [ ] **Step 2: Run** `npm test -w @isachess/web`. Expected: FAIL.
 - [ ] **Step 3: Implement** `interaction.ts`, then the components.
-- [ ] **Step 4: Run** the tests (expected: PASS) and `npm run build -w @unochess/web` (expected: success).
+- [ ] **Step 4: Run** the tests (expected: PASS) and `npm run build -w @isachess/web` (expected: success).
 - [ ] **Step 5: Commit** `feat(web): game screen and card interactions`.
 
 ---
@@ -702,7 +702,7 @@ export function highlights(view: PlayerView, sel: Selection): { selectable: Squa
 
 **Behaviour:**
 - **Playwright config:**
-  - `webServer` runs `npm run build && UNOCHESS_SEED=<seed> PORT=4173 npm start` with `url: http://localhost:4173`.
+  - `webServer` runs `npm run build && ISACHESS_SEED=<seed> PORT=4173 npm start` with `url: http://localhost:4173`.
   - `use.launchOptions.executablePath: '/opt/pw-browsers/chromium'`, Chromium only.
 - **`<seed>`:** choose and record a seed for which White's opening hand contains a 2–5 card and a 6. Find it with a short script over `createGame(seed, …)`, and put a comment in the spec file saying why the seed was chosen.
 - **`render.yaml`:** one `web` service with `env: node`, `buildCommand: npm ci && npm run build`, `startCommand: npm start`, and `healthCheckPath: /`.

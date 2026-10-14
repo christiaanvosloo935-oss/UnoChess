@@ -1,4 +1,4 @@
-import type { PieceType, PlayerView, PromotionType } from '@unochess/engine';
+import type { PieceType, PlayerView, PromotionType } from '@isachess/engine';
 import { PIECE_NAME } from './pieceNames';
 import { PieceIcon } from './PieceIcon';
 

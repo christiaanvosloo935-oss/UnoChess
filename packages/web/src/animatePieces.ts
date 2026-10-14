@@ -1,4 +1,4 @@
-import type { Piece } from '@unochess/engine';
+import type { Piece } from '@isachess/engine';
 import type { BoardDiff } from './animation';
 
 const SLIDE_MS = 260;

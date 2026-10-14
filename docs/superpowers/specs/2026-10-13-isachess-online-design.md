@@ -1,12 +1,12 @@
-# Uno Chess Online — Design Spec
+# IsaChess Online — Design Spec
 
 **Date:** 2026-10-13
 **Status:** Approved in conversation, awaiting written-spec review
-**Source rules:** *Uno Chess — The Official House Rules, v1.0* (Christiaan, October 2026)
+**Source rules:** *IsaChess — House Rules, v1.0* (Christiaan, October 2026)
 
 ## 1. Goal
 
-A browser-based online version of Uno Chess so two friends on separate devices can play
+A browser-based online version of IsaChess so two friends on separate devices can play
 each other by sharing a link. Version 1 exists to play-test the house rules with friends:
 quick to start, no sign-up, and strict enforcement of every rule so nobody has to argue
 about edge cases.
@@ -78,7 +78,7 @@ packages/
 ## 4. Rules (from the rulebook)
 
 **Setup.** Standard chessboard and pieces in the normal starting position. A standard
-108-card Uno deck: one 0 per colour, two each of 1–9 per colour, two Skip, two Reverse
+108-card deck: one 0 per colour, two each of 1–9 per colour, two Skip, two Reverse
 and two Draw Two per colour, four Wild and four Wild Draw Four. Each player draws 7.
 The rest is the draw pile. White goes first.
 
@@ -93,11 +93,11 @@ DRAW (see §5.7).
 | 7 · Freeze | One enemy piece can't move on the opponent's next turn. It can still be captured. |
 | 8 · Shapeshift | One of your pieces makes one move as any other piece type. Normal blocking applies. |
 | 9 · Trade Hands | Swap whole hands with your opponent. |
-| Skip · Shield | One of your pieces (not the king) can't be captured until the start of your next turn. No moves this turn. A shielded piece can still be frozen or swapped. |
-| Reverse · Switch Sides | Players swap armies; each keeps their own hand. |
+| Shield | One of your pieces (not the king) can't be captured until the start of your next turn. No moves this turn. A shielded piece can still be frozen or swapped. |
+| Switch Sides | Players swap armies; each keeps their own hand. |
 | Draw Two | Opponent draws 2 and skips their next turn. |
-| Wild · Revive | Return one of your captured pieces to any empty square in your first two rows (pawns allowed on the first row). It may not give check. Only a captured pawn may return as a queen; everything else returns as itself. No effect if nothing has been captured. |
-| Wild Draw Four | Opponent draws 4 and skips their next turn. |
+| Revive | Return one of your captured pieces to any empty square in your first two rows (pawns allowed on the first row). It may not give check. Only a captured pawn may return as a queen; everything else returns as itself. No effect if nothing has been captured. |
+| Draw Four | Opponent draws 4 and skips their next turn. |
 
 **Multi-move rules (cards 1–5).**
 - A. Check ends your turn: the moment you give check, remaining moves are lost.

@@ -40,5 +40,5 @@ export async function start(
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const port = Number(process.env.PORT ?? 3000);
   const staticDir = fileURLToPath(new URL('../../web/dist', import.meta.url));
-  start(port, { staticDir }).then((s) => console.log(`Uno Chess listening on http://localhost:${s.port}`));
+  start(port, { staticDir }).then((s) => console.log(`IsaChess listening on http://localhost:${s.port}`));
 }

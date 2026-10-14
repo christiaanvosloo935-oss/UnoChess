@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 export default defineConfig({
   plugins: [react()],
   resolve: {
-    alias: { '@unochess/engine': fileURLToPath(new URL('../engine/src/index.ts', import.meta.url)) },
+    alias: { '@isachess/engine': fileURLToPath(new URL('../engine/src/index.ts', import.meta.url)) },
   },
   server: {
     port: 5173,

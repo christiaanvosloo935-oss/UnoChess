@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildDeck } from '@unochess/engine';
+import { buildDeck } from '@isachess/engine';
 import { GUIDE, heldEntries } from '../src/cardGuide';
 
 describe('card guide', () => {

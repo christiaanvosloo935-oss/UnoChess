@@ -1,4 +1,4 @@
-import type { Army, Effects, Piece, Square } from '@unochess/engine';
+import type { Army, Effects, Piece, Square } from '@isachess/engine';
 
 type Board = readonly (Piece | null)[];
 

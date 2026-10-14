@@ -1,5 +1,5 @@
 {
-  "name": "unochess",
+  "name": "isachess",
   "private": true,
   "type": "module",
   "workspaces": [
@@ -7,7 +7,7 @@
   ],
   "scripts": {
     "test": "npm test --workspaces --if-present",
-    "build": "npm run build -w @unochess/engine && npm run build -w @unochess/web && npm run build -w @unochess/server",
+    "build": "npm run build -w @isachess/engine && npm run build -w @isachess/web && npm run build -w @isachess/server",
     "start": "node packages/server/dist/index.js",
     "e2e": "playwright test -c e2e/playwright.config.ts"
   },

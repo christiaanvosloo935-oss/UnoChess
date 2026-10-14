@@ -24,7 +24,7 @@ function NicknamePrompt({ onDone }: { onDone: (nick: string) => void }) {
   const [nick, setNick] = useState(getNickname());
   return (
     <main className="home">
-      <h1>Uno Chess</h1>
+      <h1>IsaChess</h1>
       <p className="tagline">You've been invited to a game.</p>
       <form onSubmit={(e) => { e.preventDefault(); if (nick.trim()) onDone(nick.trim()); }}>
         <label>
@@ -54,7 +54,7 @@ function GameRoute({ gameId, go }: { gameId: string; go: (path: string) => void 
     case 'reconnecting':
       return <main className="home"><p>{conn.status === 'connecting' ? 'Connecting…' : 'Connection lost. Reconnecting…'}</p></main>;
     case 'gone':
-      return <main className="home"><h1>Uno Chess</h1><p>This game is full.</p><a href="/">Start your own game</a></main>;
+      return <main className="home"><h1>IsaChess</h1><p>This game is full.</p><a href="/">Start your own game</a></main>;
     case 'lobby': {
       const link = `${location.origin}/g/${gameId}`;
       return (

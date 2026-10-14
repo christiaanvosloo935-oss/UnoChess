@@ -1,9 +1,9 @@
-# Uno Chess Online
+# IsaChess Online
 
-Play **Uno Chess** — chess where the Uno cards decide how you move — against a friend, each on your own device.
+Play **IsaChess** — chess where the cards decide how you move — against a friend, each on your own device.
 You create a game, send your friend the link, and play. No accounts.
 
-The house rules are in `docs/superpowers/specs/2026-10-13-uno-chess-online-design.md`
+The house rules are in `docs/superpowers/specs/2026-10-13-isachess-online-design.md`
 (the rulebook's rules plus every clarification we agreed on). The build plan is in `docs/superpowers/plans/`.
 
 ## How it is built
@@ -28,13 +28,13 @@ npm start           # http://localhost:3000
 While developing, run the server and the website with live reload in two terminals:
 
 ```bash
-npm run dev -w @unochess/server     # http://localhost:3000
-npm run dev -w @unochess/web        # http://localhost:5173 (proxies to the server)
+npm run dev -w @isachess/server     # http://localhost:3000
+npm run dev -w @isachess/web        # http://localhost:5173 (proxies to the server)
 ```
 
 ### End-to-end test
 
-`npm run e2e` builds the app, starts it on port 4173 with a fixed card shuffle (`UNOCHESS_SEED`),
+`npm run e2e` builds the app, starts it on port 4173 with a fixed card shuffle (`ISACHESS_SEED`),
 and plays a game between two real browser windows. It uses the Chromium already installed at
 `/opt/pw-browsers/chromium`; adjust `e2e/playwright.config.ts` if yours lives elsewhere.
 
@@ -42,7 +42,7 @@ and plays a game between two real browser windows. It uses the Chromium already 
 
 1. Create a free account at <https://render.com> and connect your GitHub account.
 2. **New → Blueprint**, pick this repository and the branch you want to publish.
-3. Render reads `render.yaml` (which follows the `main` branch and redeploys automatically whenever `main` changes), builds, and gives you a URL like `https://unochess.onrender.com`.
+3. Render reads `render.yaml` (which follows the `main` branch and redeploys automatically whenever `main` changes), builds, and gives you a URL like `https://<your-service-name>.onrender.com`.
 4. Open it, click **New game**, and send the game link to your friend.
 
 Notes:

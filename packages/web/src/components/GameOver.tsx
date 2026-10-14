@@ -1,4 +1,4 @@
-import type { PlayerView, RoomInfo } from '@unochess/engine';
+import type { PlayerView, RoomInfo } from '@isachess/engine';
 
 export function GameOver({ view, room, onRematch }: { view: PlayerView; room: RoomInfo; onRematch: () => void }) {
   if (view.phase.kind !== 'over') return null;

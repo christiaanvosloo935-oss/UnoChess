@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef } from 'react';
-import type { Army, Effects, PlayerView, Square } from '@unochess/engine';
+import type { Army, Effects, PlayerView, Square } from '@isachess/engine';
 import { diffBoards, newEffects, shouldAnimate, type BoardMeta } from '../animation';
 import { playTransition, prefersReducedMotion } from '../animatePieces';
 import { PieceIcon } from './PieceIcon';

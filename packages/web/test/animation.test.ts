@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { apply, START_FEN, type Action, type GameState } from '@unochess/engine';
+import { apply, START_FEN, type Action, type GameState } from '@isachess/engine';
 import { diffBoards, newEffects, shouldAnimate } from '../src/animation';
 import { card, num, sq, stateFrom } from '../../engine/test/helpers';
 

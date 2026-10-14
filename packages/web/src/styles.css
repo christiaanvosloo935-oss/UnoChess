@@ -155,48 +155,50 @@ form { display: flex; flex-direction: column; gap: 1rem; }
 .hand { display: flex; gap: 8px; overflow-x: auto; padding: 6px 2px 10px; }
 .card {
   position: relative;
+  overflow: hidden;
   flex: 0 0 auto;
   width: 66px;
   height: 96px;
   padding: 0;
   border-radius: 14px;
-  border: 3px solid #fff;
+  border: 0;
   color: #fff;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 6px rgba(80, 60, 30, 0.28);
+  background-image: linear-gradient(160deg, rgba(255, 255, 255, 0.2), rgba(0, 0, 0, 0.14));
+  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.3), 0 2px 6px rgba(80, 60, 30, 0.28);
   transition: transform 0.15s, box-shadow 0.15s;
 }
-.card:hover:not(:disabled):not(.selected) { transform: translateY(-4px); box-shadow: 0 6px 12px rgba(16, 24, 40, 0.25); }
-.card.small { width: 50px; height: 74px; border-width: 2px; }
-.card:disabled { cursor: default; opacity: 0.55; }
-.card.selected { transform: translateY(-8px); box-shadow: 0 0 0 3px #3da9fc, 0 6px 10px rgba(0, 0, 0, 0.5); }
-.card-red { background: var(--red); }
-.card-blue { background: var(--blue); }
-.card-green { background: var(--green); }
-.card-yellow { background: var(--yellow); }
-.card-wild { background: #14161f; }
-.card .oval {
-  width: 70%;
-  height: 60%;
-  border-radius: 50%;
-  background: #fff;
-  color: #14161f;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.5rem;
-  font-weight: 800;
-  transform: rotate(-24deg);
+/* A soft diagonal sheen across every card. */
+.card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, transparent 38%, rgba(255, 255, 255, 0.16) 38% 56%, transparent 56%);
+  pointer-events: none;
 }
-.card-red .oval { color: var(--red); }
-.card-blue .oval { color: var(--blue); }
-.card-green .oval { color: var(--green); }
-.card-yellow .oval { color: #c78d00; }
-.card-wild .oval { background: conic-gradient(var(--red) 0 25%, var(--blue) 0 50%, var(--green) 0 75%, var(--yellow) 0); color: #fff; -webkit-text-stroke: 1px #14161f; }
-.card .corner { position: absolute; top: 2px; left: 5px; font-size: 0.7rem; font-weight: 800; }
+.card:hover:not(:disabled):not(.selected) { transform: translateY(-4px); box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.3), 0 6px 12px rgba(16, 24, 40, 0.25); }
+.card.small { width: 50px; height: 74px; border-radius: 12px; }
+.card:disabled { cursor: default; opacity: 0.55; }
+.card.selected { transform: translateY(-8px); box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.3), 0 0 0 3px #3da9fc, 0 6px 10px rgba(0, 0, 0, 0.5); }
+.card-red { background-color: var(--red); }
+.card-blue { background-color: var(--blue); }
+.card-green { background-color: var(--green); }
+.card-yellow { background-color: var(--yellow); }
+.card-wild { background-color: #1d1a3a; }
+.card .face {
+  position: relative;
+  font-size: 2rem;
+  font-weight: 800;
+  line-height: 1;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.22);
+}
+.card-yellow .face { color: #3d2e00; text-shadow: none; }
+.card-wild .face { color: #ffd76a; }
+.card .corner { position: absolute; top: 4px; left: 6px; font-size: 0.7rem; font-weight: 800; }
+.card-yellow .corner { color: #3d2e00; }
 .card .caption {
   position: absolute;
   bottom: -2px;
@@ -315,7 +317,7 @@ form { display: flex; flex-direction: column; gap: 1rem; }
 .guide-modal { width: min(94vw, 560px); align-items: stretch; max-height: 92vh; }
 .guide-modal .card-guide { max-height: 62vh; background: transparent; border: 0; box-shadow: none; padding: 0; }
 .home .card-guide { max-height: none; }
-.card .oval.wide { font-size: 0.95rem; white-space: nowrap; }
+.card .face.wide { font-size: 1.05rem; white-space: nowrap; }
 
 @keyframes fade-in { from { opacity: 0; } }
 @keyframes pop-in { from { opacity: 0; transform: translateY(8px) scale(0.98); } }
