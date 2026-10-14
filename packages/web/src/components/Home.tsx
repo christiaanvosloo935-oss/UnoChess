@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { createGame } from '../api';
+import { Brand } from './Brand';
 import { CardGuideModal } from './CardGuide';
 import { getNickname, saveNickname, setSeat } from '../seat';
 
@@ -27,7 +28,7 @@ export function Home({ note, go }: { note?: string; go: (path: string) => void }
 
   return (
     <main className="home">
-      <h1>IsaChess</h1>
+      <Brand />
       <p className="tagline">Chess, but the cards decide how you move.</p>
       {note && <p className="note">{note}</p>}
       <form onSubmit={(e) => { e.preventDefault(); void create(); }}>

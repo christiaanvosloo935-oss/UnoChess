@@ -1,5 +1,9 @@
 # IsaChess Online
 
+<img src="packages/web/public/logo.svg" alt="IsaChess logo" width="96" align="right">
+
+**Play it now: <https://isachess.onrender.com>**
+
 Play **IsaChess** — chess where the cards decide how you move — against a friend, each on your own device.
 You create a game, send your friend the link, and play. No accounts.
 
@@ -42,7 +46,7 @@ and plays a game between two real browser windows. It uses the Chromium already 
 
 1. Create a free account at <https://render.com> and connect your GitHub account.
 2. **New → Blueprint**, pick this repository and the branch you want to publish.
-3. Render reads `render.yaml` (which follows the `main` branch and redeploys automatically whenever `main` changes), builds, and gives you a URL like `https://isachess.onrender.com` (the address comes from the service name in `render.yaml`; Render adds extra letters if the name is already taken).
+3. Render reads `render.yaml` (which follows the `main` branch and redeploys automatically whenever `main` changes), builds, and gives you your address, which comes from the service name in `render.yaml`. The live game is at <https://isachess.onrender.com>.
 4. Open it, click **New game**, and send the game link to your friend.
 
 Notes:
@@ -51,6 +55,8 @@ Notes:
 - Games that nobody has touched for 24 hours are removed automatically.
 
 ## Credits
+
+Logo: drawn for IsaChess (a pawn and a reverse card).
 
 Chess piece artwork: the "Cburnett" set by Colin M.L. Burnett, from
 [Wikimedia Commons](https://commons.wikimedia.org/wiki/Category:SVG_chess_pieces)

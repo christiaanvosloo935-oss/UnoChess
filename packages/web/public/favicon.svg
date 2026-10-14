@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <circle cx="128" cy="128" r="124" fill="#1f7a6d"/>
+  <circle cx="128" cy="128" r="124" fill="url(#g)"/>
+  <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".2"/><stop offset="1" stop-color="#000" stop-opacity=".18"/></linearGradient></defs>
+  <g transform="translate(38 28) scale(1.45)">
+  <g fill="#ffffff" stroke="none" stroke-width="0" stroke-linejoin="round">
+    <circle cx="50" cy="24" r="11.5"/>
+    <ellipse cx="50" cy="41" rx="17" ry="5.2"/>
+    <path d="M36 45 C38 56 41 62 32 75 L68 75 C59 62 62 56 64 45 Z"/>
+    <rect x="25" y="74" width="50" height="8.5" rx="4.2"/>
+    <rect x="19" y="82" width="62" height="9.5" rx="4.7"/>
+  </g></g>
+  <g transform="translate(194 198) rotate(-12)">
+    <rect x="-34" y="-46" width="68" height="92" rx="12" fill="#faf6ef"/>
+    <g transform="scale(.95)">
+  <g fill="none" stroke="#1f7a6d" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M-17 -8 H16"/><path d="M8 -17 L18 -8 L8 1"/>
+    <path d="M17 8 H-16"/><path d="M-8 -1 L-18 8 L-8 17"/>
+  </g></g>
+  </g>
+</svg>

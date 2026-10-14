@@ -239,3 +239,27 @@ test('hovering a board square or a card never changes its colour', async ({ brow
   await alice.waitForTimeout(250);
   expect(await background(alice.getByTestId('tab-cards'))).toBe('rgb(230, 220, 203)');
 });
+
+test('the logo shows on the home page and the web-app files are served', async ({ page, request }) => {
+  await page.goto('/');
+  const logo = page.getByAltText('IsaChess logo').first();
+  await expect(logo).toBeVisible();
+  expect(await logo.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
+  await expect(page.locator('link[rel="icon"]')).toHaveAttribute('href', '/favicon.svg');
+  await expect(page.locator('link[rel="apple-touch-icon"]')).toHaveAttribute('href', '/apple-touch-icon.png');
+  await expect(page.locator('link[rel="manifest"]')).toHaveAttribute('href', '/manifest.webmanifest');
+  await expect(page.locator('meta[property="og:image"]')).toHaveAttribute('content', 'https://isachess.onrender.com/og-image.png');
+
+  const manifest = await request.get('/manifest.webmanifest');
+  expect(manifest.headers()['content-type']).toContain('application/manifest+json');
+  const data = await manifest.json();
+  expect(data).toMatchObject({ name: 'IsaChess', display: 'standalone', start_url: '/' });
+  for (const icon of data.icons) {
+    const res = await request.get(icon.src);
+    expect(res.status()).toBe(200);
+    expect(res.headers()['content-type']).toContain('image/png');
+  }
+  for (const file of ['/favicon.svg', '/logo.svg', '/apple-touch-icon.png', '/og-image.png']) {
+    expect((await request.get(file)).status()).toBe(200);
+  }
+});
