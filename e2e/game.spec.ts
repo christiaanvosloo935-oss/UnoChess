@@ -263,3 +263,14 @@ test('the logo shows on the home page and the web-app files are served', async (
     expect((await request.get(file)).status()).toBe(200);
   }
 });
+
+test('the Shield card shows a real shield and the Revive card shows an R', async ({ page }) => {
+  await page.goto('/');
+  await page.getByTestId('home-guide').click();
+  const shield = page.getByTestId('guide-entry').filter({ hasText: 'Shield' });
+  await expect(shield.locator('svg[data-testid="shield-icon"]').first()).toBeVisible();
+  await expect(shield.locator('.card')).not.toContainText('\u2298');
+  const revive = page.getByTestId('guide-entry').filter({ hasText: 'Revive' });
+  await expect(revive.locator('.card .face')).toHaveText('R');
+  await expect(revive.locator('.card .corner')).toHaveText('R');
+});
