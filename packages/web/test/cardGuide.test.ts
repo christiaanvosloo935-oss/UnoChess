@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { buildDeck } from '@isachess/engine';
 import { GUIDE, heldEntries } from '../src/cardGuide';
+import { cardSymbol } from '../src/components/CardView';
 
 describe('card guide', () => {
   it('explains every kind of card: 11 entries, each with plain text', () => {
@@ -26,5 +27,12 @@ describe('card guide', () => {
     expect(held).toHaveLength(3);
     expect(held).toEqual(expect.arrayContaining([GUIDE.find((e) => e.matches(pick('num', 3)))!.title]));
     expect(heldEntries([])).toEqual([]);
+  });
+});
+
+describe('card symbols', () => {
+  it('the Revive card is marked R, not W', () => {
+    const wild = buildDeck().find((c) => c.kind === 'wild')!;
+    expect(cardSymbol(wild)).toBe('R');
   });
 });

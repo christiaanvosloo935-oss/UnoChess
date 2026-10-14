@@ -6,9 +6,20 @@ export function cardSymbol(card: Card): string {
     case 'skip': return '⊘';
     case 'reverse': return '⇄';
     case 'draw2': return '+2';
-    case 'wild': return 'W';
+    case 'wild': return 'R';
     case 'wild4': return '+4';
   }
+}
+
+/** A heater-style shield, drawn in the card's text colour with a lighter inner edge. */
+export function ShieldIcon() {
+  return (
+    <svg className="shield-icon" data-testid="shield-icon" viewBox="0 0 24 26" aria-label="Shield" role="img">
+      <path d="M12 1.5 21 4.8v7.4c0 5.6-3.7 9.6-9 12-5.3-2.4-9-6.4-9-12V4.8z" fill="currentColor" />
+      <path d="M12 4.6 18.4 7v5.2c0 4-2.5 7-6.4 9-3.9-2-6.4-5-6.4-9V7z" fill="none" stroke="rgba(0,0,0,0.28)" strokeWidth="1.4" />
+      <path d="M12 4.6v16.6" stroke="rgba(0,0,0,0.2)" strokeWidth="1.2" />
+    </svg>
+  );
 }
 
 export function cardName(card: Card): string {
@@ -49,8 +60,10 @@ export function CardView({ card, onClick, disabled, selected, asOne, small, labe
       data-testid={`card-${card.id}`}
       title={asOne ? `${cardName(card)} (play as a 1 move)` : cardName(card)}
     >
-      <span className="corner">{label ?? cardSymbol(card)}</span>
-      <span className={`face${(label ?? cardSymbol(card)).length > 2 ? ' wide' : ''}`}>{label ?? cardSymbol(card)}</span>
+      <span className="corner">{card.kind === 'skip' ? <ShieldIcon /> : (label ?? cardSymbol(card))}</span>
+      <span className={`face${card.kind !== 'skip' && (label ?? cardSymbol(card)).length > 2 ? ' wide' : ''}`}>
+        {card.kind === 'skip' ? <ShieldIcon /> : (label ?? cardSymbol(card))}
+      </span>
       <span className="caption">{asOne ? 'as 1 move' : (caption ?? cardName(card))}</span>
     </button>
   );
