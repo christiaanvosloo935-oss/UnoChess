@@ -4,6 +4,7 @@ import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { request } from 'node:http';
+import { connect } from 'node:net';
 import { createGame, type Action, type PlayerView, type ServerMessage } from '@isachess/engine';
 import { start } from '../src/index.js';
 
@@ -272,6 +273,24 @@ describe('websocket game', () => {
 });
 
 describe('http', () => {
+  it('answers malformed request lines with 400 and keeps running', async () => {
+    const server = await boot();
+    for (const target of ['//:', '//[', 'http://', '/%E0%A4%A', '//a:b@']) {
+      const reply = await new Promise<string>((resolve) => {
+        const socket = connect(server.port, 'localhost', () =>
+          socket.write(`GET ${target} HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n`),
+        );
+        let data = '';
+        socket.on('data', (d) => (data += d));
+        socket.on('close', () => resolve(data));
+        socket.on('error', () => resolve(data));
+      });
+      expect(reply, target).toMatch(/^HTTP\/1\.1 (400|404|200)/);
+    }
+    const ok = await createViaHttp(server.port);
+    expect(ok.status).toBe(200);
+  });
+
   it('rejects bad nicknames', async () => {
     const server = await boot();
     for (const nickname of ['', '   ', 'x'.repeat(21), 5]) {
