@@ -75,7 +75,15 @@ async function serveStatic(staticDir: string, pathname: string, res: ServerRespo
 
 export function handleHttp(rooms: Rooms, staticDir?: string) {
   return (req: IncomingMessage, res: ServerResponse): void => {
-    const pathname = new URL(req.url ?? '/', 'http://localhost').pathname;
+    // A malformed request line (bots send them all day) must never throw out of the handler and take the server down.
+    let pathname: string;
+    try {
+      pathname = new URL(req.url ?? '/', 'http://localhost').pathname;
+    } catch {
+      res.writeHead(400, { 'content-type': 'text/plain; charset=utf-8', connection: 'close' });
+      res.end('Bad request');
+      return;
+    }
     const run = async () => {
       if (req.method === 'POST' && pathname === '/api/games') return createGame(req, res, rooms);
       if (req.method === 'GET' && staticDir && !pathname.startsWith('/api/')) return serveStatic(staticDir, pathname, res);

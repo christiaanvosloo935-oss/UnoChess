@@ -38,6 +38,9 @@ export async function start(
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  // Games live in memory, so one stray error should be logged, not allowed to end every game in progress.
+  process.on('uncaughtException', (err) => console.error('Uncaught exception:', err));
+  process.on('unhandledRejection', (reason) => console.error('Unhandled rejection:', reason));
   const port = Number(process.env.PORT ?? 3000);
   const staticDir = fileURLToPath(new URL('../../web/dist', import.meta.url));
   start(port, { staticDir }).then((s) => console.log(`IsaChess listening on http://localhost:${s.port}`));
