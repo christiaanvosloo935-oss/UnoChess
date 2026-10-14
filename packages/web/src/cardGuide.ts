@@ -1,4 +1,4 @@
-import type { Card } from '@unochess/engine';
+import type { Card } from '@isachess/engine';
 
 export interface GuideEntry {
   title: string;
@@ -58,31 +58,31 @@ export const GUIDE: GuideEntry[] = [
     matches: num(9),
   },
   {
-    title: 'Skip · Shield',
+    title: 'Shield',
     text: "Choose one of your pieces (not the king). It can't be captured until your next turn. You make no moves this turn.",
     sample: sample('skip', 'green'),
     matches: kind('skip'),
   },
   {
-    title: 'Reverse · Switch Sides',
+    title: 'Switch sides',
     text: 'You and your opponent swap seats and now control the other army. Each of you keeps your own hand.',
     sample: sample('reverse', 'yellow'),
     matches: kind('reverse'),
   },
   {
-    title: '+2 · Draw Two',
+    title: 'Draw two',
     text: 'Your opponent skips their next turn and draws 2 cards.',
     sample: sample('draw2', 'red'),
     matches: kind('draw2'),
   },
   {
-    title: 'Wild · Revive',
+    title: 'Revive',
     text: "Bring back one of your captured pieces onto any empty square in your first two rows. It can't give check. A captured pawn may come back as a queen. If nothing of yours has been captured, nothing happens.",
     sample: sample('wild', null),
     matches: kind('wild'),
   },
   {
-    title: '+4 · Wild Draw Four',
+    title: 'Draw four',
     text: 'Your opponent skips their next turn and draws 4 cards.',
     sample: sample('wild4', null),
     matches: kind('wild4'),

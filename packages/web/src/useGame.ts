@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { Action, ChatMessage, PlayerView, RoomInfo, ServerMessage } from '@unochess/engine';
+import type { Action, ChatMessage, PlayerView, RoomInfo, ServerMessage } from '@isachess/engine';
 import { getSeat, setSeat } from './seat';
 
 export type GameConn =

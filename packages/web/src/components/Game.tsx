@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import type { ChatMessage, PlayerView, PromotionType, RoomInfo, Square } from '@unochess/engine';
+import type { ChatMessage, PlayerView, PromotionType, RoomInfo, Square } from '@isachess/engine';
 import { highlights, prompt, roleOf, step, type Selection, type UiEvent } from '../interaction';
-import type { Action } from '@unochess/engine';
+import type { Action } from '@isachess/engine';
 import { Board } from './Board';
 import { CardGuide } from './CardGuide';
 import { Chat } from './Chat';

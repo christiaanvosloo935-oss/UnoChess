@@ -4,7 +4,7 @@ import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { request } from 'node:http';
-import { createGame, type Action, type PlayerView, type ServerMessage } from '@unochess/engine';
+import { createGame, type Action, type PlayerView, type ServerMessage } from '@isachess/engine';
 import { start } from '../src/index.js';
 
 type Started = Awaited<ReturnType<typeof start>>;

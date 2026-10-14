@@ -21,6 +21,6 @@ export default defineConfig({
     url: `http://localhost:${PORT}`,
     timeout: 180_000,
     reuseExistingServer: false,
-    env: { PORT: String(PORT), UNOCHESS_SEED: String(SEED) },
+    env: { PORT: String(PORT), ISACHESS_SEED: String(SEED) },
   },
 });

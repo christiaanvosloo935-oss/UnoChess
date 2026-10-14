@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: unochess
+    name: isachess
     runtime: node
     plan: free
     # Follow main and redeploy automatically whenever main changes.

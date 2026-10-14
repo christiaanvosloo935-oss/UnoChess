@@ -1,6 +1,6 @@
 import type { Server } from 'node:http';
 import { WebSocket, WebSocketServer } from 'ws';
-import type { Action, ClientMessage, PlayerId, ServerMessage } from '@unochess/engine';
+import type { Action, ClientMessage, PlayerId, ServerMessage } from '@isachess/engine';
 import type { Rooms } from './rooms.js';
 
 interface Client {

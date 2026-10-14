@@ -1,4 +1,4 @@
-import type { Card } from '@unochess/engine';
+import type { Card } from '@isachess/engine';
 import { GOOD_TO_KNOW, GUIDE, heldEntries } from '../cardGuide';
 import { CardView } from './CardView';
 

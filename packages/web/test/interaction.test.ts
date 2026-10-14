@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { apply, viewFor, START_FEN, type Action, type GameState, type PlayerView } from '@unochess/engine';
+import { apply, viewFor, START_FEN, type Action, type GameState, type PlayerView } from '@isachess/engine';
 import { highlights, prompt, step, type Selection } from '../src/interaction';
 import { card, num, sq, stateFrom } from '../../engine/test/helpers';
 

@@ -1,4 +1,4 @@
-import type { Card } from '@unochess/engine';
+import type { Card } from '@isachess/engine';
 
 export function cardSymbol(card: Card): string {
   switch (card.kind) {
@@ -50,7 +50,7 @@ export function CardView({ card, onClick, disabled, selected, asOne, small, labe
       title={asOne ? `${cardName(card)} (play as a 1 move)` : cardName(card)}
     >
       <span className="corner">{label ?? cardSymbol(card)}</span>
-      <span className={`oval${(label ?? cardSymbol(card)).length > 2 ? ' wide' : ''}`}>{label ?? cardSymbol(card)}</span>
+      <span className={`face${(label ?? cardSymbol(card)).length > 2 ? ' wide' : ''}`}>{label ?? cardSymbol(card)}</span>
       <span className="caption">{asOne ? 'as 1 move' : (caption ?? cardName(card))}</span>
     </button>
   );

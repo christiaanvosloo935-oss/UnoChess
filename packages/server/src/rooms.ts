@@ -2,7 +2,7 @@ import { randomBytes, randomInt, randomUUID, timingSafeEqual } from 'node:crypto
 import {
   apply, createGame, viewFor,
   type Action, type ChatMessage, type GameState, type PlayerId, type RoomInfo, type ServerMessage,
-} from '@unochess/engine';
+} from '@isachess/engine';
 
 const ID_CHARS = 'abcdefghjkmnpqrstuvwxyz23456789';
 export const MAX_CHAT_LENGTH = 200;
@@ -30,7 +30,7 @@ export interface RoomsOptions {
 }
 
 function defaultSeed(): number {
-  const fixed = process.env.UNOCHESS_SEED;
+  const fixed = process.env.ISACHESS_SEED;
   if (fixed !== undefined && fixed !== '' && Number.isFinite(Number(fixed))) return Number(fixed);
   return randomInt(2 ** 31);
 }

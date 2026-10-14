@@ -1,5 +1,5 @@
 {
-  "name": "@unochess/server",
+  "name": "@isachess/server",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -10,7 +10,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@unochess/engine": "*",
+    "@isachess/engine": "*",
     "ws": "^8.18.0"
   },
   "devDependencies": {

@@ -1,4 +1,4 @@
-import type { Army, PieceType } from '@unochess/engine';
+import type { Army, PieceType } from '@isachess/engine';
 import { PIECE_NAME } from './pieceNames';
 
 /** Piece artwork: the "Cburnett" SVG set (see README for the licence). */

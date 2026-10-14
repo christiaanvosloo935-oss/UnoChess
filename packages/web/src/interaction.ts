@@ -1,4 +1,4 @@
-import type { Action, Card, EffectArgs, PieceType, PlayerView, PromotionType, Square } from '@unochess/engine';
+import type { Action, Card, EffectArgs, PieceType, PlayerView, PromotionType, Square } from '@isachess/engine';
 
 export type Selection =
   | { kind: 'idle' }

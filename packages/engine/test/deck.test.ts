@@ -4,7 +4,7 @@ import { buildDeck, drawCards, type Card } from '../src/index.js';
 const num = (id: string, value = 0): Card => ({ id, kind: 'num', colour: 'red', value });
 
 describe('deck', () => {
-  it('has 108 cards with the standard Uno breakdown', () => {
+  it('has 108 cards with the standard breakdown', () => {
     const deck = buildDeck();
     expect(deck).toHaveLength(108);
     expect(new Set(deck.map((c) => c.id)).size).toBe(108);
