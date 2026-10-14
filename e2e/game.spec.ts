@@ -234,8 +234,8 @@ test('hovering a board square or a card never changes its colour', async ({ brow
   // Quiet buttons get their own light hover colour, never the blue of the main buttons.
   await alice.getByRole('button', { name: 'Resign' }).hover();
   await alice.waitForTimeout(250);
-  expect(await background(alice.getByRole('button', { name: 'Resign' }))).toBe('rgb(249, 250, 251)');
+  expect(await background(alice.getByRole('button', { name: 'Resign' }))).toBe('rgb(250, 246, 239)');
   await alice.getByTestId('tab-cards').hover();
   await alice.waitForTimeout(250);
-  expect(await background(alice.getByTestId('tab-cards'))).toBe('rgb(221, 225, 233)');
+  expect(await background(alice.getByTestId('tab-cards'))).toBe('rgb(230, 220, 203)');
 });
