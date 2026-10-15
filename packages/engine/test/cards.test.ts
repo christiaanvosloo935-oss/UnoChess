@@ -181,23 +181,24 @@ describe('9 · Trade Hands', () => {
     const ys = [num(3), num(4), num(5), num(1)];
     const s = stateFrom(START_FEN, { w: [nine, x1, x2], b: ys });
     const after = ok(s, 'A', play(nine));
-    expect(after.hands.B.map((c) => c.id)).toEqual([x1.id, x2.id]);
+    expect(after.hands.B.slice(0, 2).map((c) => c.id)).toEqual([x1.id, x2.id]);
+    expect(after.hands.B).toHaveLength(7); // topped up to 7 after the swap
     const mine = after.hands.A.map((c) => c.id);
     for (const y of ys) expect(mine).toContain(y.id);
     expect(mine).not.toContain(nine.id);
-    expect(mine).toHaveLength(5);
+    expect(mine).toHaveLength(7);
   });
 });
 
 describe('9 · Trade Hands with an empty result', () => {
-  it('a player who is left with no cards draws one at the start of their turn', () => {
+  it('a player who is left with no cards is topped up to 7 straight away', () => {
     const nine = num(9);
     const s = stateFrom(START_FEN, { w: [nine], b: [num(1), num(2), num(3)] });
     const after = ok(s, 'A', play(nine));
     expect(after.current).toBe('B');
-    expect(after.hands.A).toHaveLength(4);
-    expect(after.hands.B).toHaveLength(1);
-    expect(playableCards(after, 'B')).toHaveLength(1);
+    expect(after.hands.A).toHaveLength(7);
+    expect(after.hands.B).toHaveLength(7);
+    expect(playableCards(after, 'B')).toHaveLength(7);
   });
 
   it('even a hand traded down to nothing never leaves the player without a card', () => {
@@ -229,9 +230,9 @@ describe('Reverse', () => {
 describe('Draw Two / Wild Draw Four', () => {
   it('draw2: opponent gets +2, is skipped, and the player goes again', () => {
     const d2 = card('draw2');
-    const s = stateFrom(START_FEN, { w: [d2, num(0)], b: [num(1)] });
+    const s = stateFrom(START_FEN, { w: [d2, num(0)], b: Array.from({ length: 7 }, () => num(1)) });
     const after = ok(s, 'A', play(d2));
-    expect(after.hands.B).toHaveLength(3);
+    expect(after.hands.B).toHaveLength(9);
     expect(after.current).toBe('A');
     expect(after.turn).toBe(3);
     expect(after.effects.pendingSkips).toEqual([]);
@@ -239,9 +240,9 @@ describe('Draw Two / Wild Draw Four', () => {
 
   it('wild4: opponent gets +4 and is skipped', () => {
     const w4 = card('wild4');
-    const s = stateFrom(START_FEN, { w: [w4, num(0)], b: [num(1)] });
+    const s = stateFrom(START_FEN, { w: [w4, num(0)], b: Array.from({ length: 7 }, () => num(1)) });
     const after = ok(s, 'A', play(w4));
-    expect(after.hands.B).toHaveLength(5);
+    expect(after.hands.B).toHaveLength(11);
     expect(after.current).toBe('A');
   });
 

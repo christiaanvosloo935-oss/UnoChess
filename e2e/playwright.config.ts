@@ -1,6 +1,7 @@
 import { defineConfig } from '@playwright/test';
 
-// Seed 1 deals White: 6, 4, 7, 1, Reverse, +4, 8 and Black: Reverse, 0, 0, Wild, 2, 3, 2.
+// Seed 1 deals White: 6, 9, 2, 4, 4, Reverse, Skip and Black: 7, 6, 2, Skip, Skip, 4, 5
+// (a third player, in a 3-player game, gets 7, 9, 1, 3, +2, 5, 5).
 // White therefore has a multi-move card and a Swap, and Black has a multi-move card, so the
 // scripted game in game.spec.ts is deterministic.
 export const SEED = 1;

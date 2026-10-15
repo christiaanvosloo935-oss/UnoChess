@@ -58,12 +58,22 @@ export function inCheckNow(state: GameState): boolean {
   return isInCheck(state.chess, armyOf(state, state.current));
 }
 
-/** Move-generation context for an army: its frozen pieces, every shielded piece, and pieces already moved. */
+/** A piece may make at most this many moves on one move card. */
+export const MAX_MOVES_PER_PIECE = 2;
+
+/** Piece ids that have used up their moves on this card; `moved` lists a piece once per move it made. */
+export function exhaustedPieces(moved: readonly string[]): Set<string> {
+  const counts = new Map<string, number>();
+  for (const id of moved) counts.set(id, (counts.get(id) ?? 0) + 1);
+  return new Set([...counts].filter(([, n]) => n >= MAX_MOVES_PER_PIECE).map(([id]) => id));
+}
+
+/** Move-generation context for an army: its frozen pieces, every shielded piece, and pieces that used up their moves. */
 export function ctxFor(state: GameState, army: Army, moved: readonly string[] = []): MoveContext {
   return {
     frozen: new Set(state.effects.frozen.filter((f) => f.army === army).map((f) => f.pieceId)),
     shielded: new Set(state.effects.shields.map((s) => s.pieceId)),
-    moved: new Set(moved),
+    moved: exhaustedPieces(moved),
     turn: state.turn,
   };
 }

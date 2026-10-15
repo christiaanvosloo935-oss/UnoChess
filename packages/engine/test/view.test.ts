@@ -49,11 +49,12 @@ describe('viewFor', () => {
     expect(viewFor(s, 'A').options.cards).toHaveLength(1);
   });
 
-  it('in the moving phase the options exclude already-moved pieces', () => {
-    const c = num(2);
+  it('in the moving phase the options exclude pieces that used up their two moves', () => {
+    const c = num(3);
     let s = stateFrom(START_FEN, { w: [c] });
     s = ok(s, 'A', { type: 'playCard', cardId: c.id });
-    s = ok(s, 'A', { type: 'move', from: sq('e2'), to: sq('e4') });
+    s = ok(s, 'A', { type: 'move', from: sq('e2'), to: sq('e3') });
+    s = ok(s, 'A', { type: 'move', from: sq('e3'), to: sq('e4') });
     const { moves, canDoneMoving } = viewFor(s, 'A').options;
     expect(canDoneMoving).toBe(true);
     expect(moves.length).toBeGreaterThan(0);
