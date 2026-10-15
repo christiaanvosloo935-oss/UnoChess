@@ -100,6 +100,7 @@ function playCard(s: GameState, player: PlayerId, action: Extract<Action, { type
   }
   hand.splice(idx, 1);
   s.discardPile.push(card);
+  s.lastPlayed = { player, card, asOne };
   log(s, player, asOne ? `played ${cardLabel(card)} as a 1` : `played ${cardLabel(card)}`);
 
   if (asOne) return startMoving(s, player, card.id, 1);

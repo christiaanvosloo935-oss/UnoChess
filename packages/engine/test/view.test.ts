@@ -31,6 +31,15 @@ describe('viewFor', () => {
     expect(JSON.stringify(view)).not.toContain('discardPile');
   });
 
+  it('reports who played the last card, as a one or as its effect', () => {
+    const two = num(2);
+    const s = stateFrom(START_FEN, { w: [two, num(1)], b: [num(3)] });
+    expect(viewFor(s, 'B').lastPlayed).toBeNull();
+    const after = ok(s, 'A', { type: 'playCard', cardId: two.id });
+    expect(viewFor(after, 'B').lastPlayed).toEqual({ player: 'A', card: two, asOne: false });
+    expect(viewFor(after, 'A').lastPlayed).toEqual({ player: 'A', card: two, asOne: false });
+  });
+
   it('options are empty when it is not your turn', () => {
     const s = stateFrom(START_FEN, { w: [num(1)], b: [num(1)] });
     const opts = viewFor(s, 'B').options;

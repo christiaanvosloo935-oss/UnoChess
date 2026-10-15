@@ -97,6 +97,12 @@ export function Game({ view, room, send, rematch, chat, me, sendChat, lastError,
               )}
             </div>
           ))}
+          {view.lastPlayed && (
+            <div className="last-played" data-testid="last-played">
+              <span className="muted">{view.lastPlayed.player === view.you ? 'You played' : `${name(view.lastPlayed.player)} played`}</span>
+              <CardView card={view.lastPlayed.card} asOne={view.lastPlayed.asOne} disabled small />
+            </div>
+          )}
         </div>
         <p className={`status${view.inCheck.includes(view.yourArmy) ? ' alert' : ''}`} data-testid="status">
           {statusText(view, room, sel)}

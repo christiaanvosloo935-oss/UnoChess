@@ -6,7 +6,7 @@ import { isInCheck, legalMoves } from './chess.js';
 import { geometryFor, type Variant } from './geometry.js';
 import { armyOf, ctxFor, isDeadArmy, opponentsOf } from './state.js';
 import type {
-  Army, Card, ChessState, Effects, GameEvent, GameState, Move, Phase, PlayerId,
+  Army, Card, ChessState, Effects, GameEvent, GameState, LastPlayed, Move, Phase, PlayerId,
 } from './types.js';
 
 export interface LegalOptions {
@@ -39,6 +39,7 @@ export interface PlayerView {
   hand: Card[];
   drawPileCount: number;
   topDiscard: Card | null;
+  lastPlayed: LastPlayed | null; // public: the card was played face up
   current: PlayerId;
   turn: number;
   phase: Phase;
@@ -115,6 +116,7 @@ export function viewFor(state: GameState, player: PlayerId): PlayerView {
     hand: state.hands[player],
     drawPileCount: state.drawPile.length,
     topDiscard: state.discardPile.length > 0 ? state.discardPile[state.discardPile.length - 1] : null,
+    lastPlayed: state.lastPlayed ?? null,
     current: state.current,
     turn: state.turn,
     phase: state.phase,
