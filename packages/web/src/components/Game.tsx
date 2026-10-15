@@ -7,6 +7,7 @@ import { Board } from './Board';
 import { CardGuide } from './CardGuide';
 import { Chat } from './Chat';
 import { CardBack, CardView } from './CardView';
+import { HexBoard } from './HexBoard';
 import { GameOver } from './GameOver';
 import { PieceIcon } from './PieceIcon';
 import { PromotionPicker, RevivePicker, ShapeshiftPicker, TargetPicker } from './Pickers';
@@ -101,7 +102,7 @@ export function Game({ view, room, send, rematch, chat, me, sendChat, lastError,
           {statusText(view, room, sel)}
         </p>
         {three ? (
-          <div className="board-placeholder" data-testid="hex-placeholder">The hexagon board arrives in the next step</div>
+          <HexBoard view={view} selectable={selectable} targets={targets} selected={selectedSquares} onSquare={(s) => dispatch({ type: 'clickSquare', sq: s })} />
         ) : (
           <Board view={view} selectable={selectable} targets={targets} selected={selectedSquares} onSquare={(s) => dispatch({ type: 'clickSquare', sq: s })} />
         )}
