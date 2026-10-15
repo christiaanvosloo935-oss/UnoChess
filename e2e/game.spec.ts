@@ -25,6 +25,7 @@ test('two players create, join, and play', async ({ browser }) => {
   await bob.getByTestId('join-game').click();
   await expect(status(alice)).toHaveText('Your turn: play a card');
   await expect(status(bob)).toHaveText("Alice's turn");
+  await expect(bob.getByTestId('last-played')).toHaveCount(0);
 
   // Chat reaches the other player, nicknames are shown, and nothing is rendered as HTML.
   await alice.getByTestId('chat-input').fill('hello <b>Bob</b>');
@@ -41,6 +42,7 @@ test('two players create, join, and play', async ({ browser }) => {
   await playMoveCard(alice, 'e2', 'e4');
   await expect(status(bob)).toHaveText('Your turn: play a card');
   await expect(square(bob, 'e4').locator('img')).toHaveAttribute('alt', 'white pawn');
+  await expect(bob.getByTestId('last-played')).toContainText('Alice played');
 
   // Bob (Black) answers with e7-e5.
   await playMoveCard(bob, 'e7', 'e5');
@@ -58,6 +60,10 @@ test('two players create, join, and play', async ({ browser }) => {
   await expect(square(alice, 'a1').locator('img')).toHaveAttribute('alt', knight!);
   await expect(square(alice, 'b1').locator('img')).toHaveAttribute('alt', rook!);
   await expect(status(bob)).toHaveText('Your turn: play a card');
+  // Bob can see which card Alice just used: the Swap card, with its picture.
+  await expect(bob.getByTestId('last-played')).toContainText('Alice played');
+  await expect(bob.getByTestId('last-played').locator('svg[data-testid="icon-swap"]').first()).toBeVisible();
+  await expect(alice.getByTestId('last-played')).toContainText('You played');
 
   // Refreshing keeps the seat, the hand and the board.
   const handBefore = await alice.locator('[data-testid=hand] button').count();
@@ -273,4 +279,16 @@ test('the Shield card shows a real shield and the Revive card shows an R', async
   const revive = page.getByTestId('guide-entry').filter({ hasText: 'Revive' });
   await expect(revive.locator('.card .face')).toHaveText('R');
   await expect(revive.locator('.card .corner')).toHaveText('R');
+});
+
+test('the Swap, Freeze, Shapeshift and Trade Hands cards show pictures instead of numbers', async ({ page }) => {
+  await page.goto('/');
+  await page.getByTestId('home-guide').click();
+  const cases = [['Swap', 'swap', '6'], ['Freeze', 'freeze', '7'], ['Shapeshift', 'shapeshift', '8'], ['Trade Hands', 'trade', '9']];
+  for (const [title, icon, digit] of cases) {
+    const entry = page.getByTestId('guide-entry').filter({ hasText: `${digit} · ${title}` });
+    await expect(entry.locator(`svg[data-testid="icon-${icon}"]`)).toHaveCount(2); // corner and face
+    await expect(entry.locator('.card .face')).not.toContainText(digit);
+    await expect(entry.locator('.card .corner')).not.toContainText(digit);
+  }
 });

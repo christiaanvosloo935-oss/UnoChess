@@ -62,6 +62,13 @@ export interface GameEvent {
   text: string; // public text only
 }
 
+/** The card most recently played, kept even after the discard pile is reshuffled. */
+export interface LastPlayed {
+  player: PlayerId;
+  card: Card;
+  asOne: boolean;
+}
+
 export interface GameState {
   chess: ChessState;
   captured: { w: PieceType[]; b: PieceType[] }; // pieces OF that army that were captured
@@ -77,6 +84,7 @@ export interface GameState {
   effects: Effects;
   nextPieceId: number;
   log: GameEvent[];
+  lastPlayed?: LastPlayed;
 }
 
 export type EffectArgs =
