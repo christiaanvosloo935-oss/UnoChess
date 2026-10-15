@@ -1,6 +1,6 @@
 import { enemiesOf, geometryFor } from './geometry.js';
 import { isInCheck, type MoveContext } from './chess.js';
-import type { Army, GameState, PlayerId } from './types.js';
+import type { Army, ChessState, GameState, PlayerId } from './types.js';
 
 export function armyOf(state: GameState, player: PlayerId): Army {
   const armies = geometryFor(state.variant).armies;
@@ -18,6 +18,19 @@ export function isDeadArmy(state: GameState, army: Army): boolean {
 /** The armies that can attack `army`'s king and are still in play (an eliminated king's check no longer matters). */
 export function liveEnemiesOf(state: GameState, army: Army): Army[] {
   return enemiesOf(state.variant, army).filter((e) => !isDeadArmy(state, e));
+}
+
+/** The live enemies of `army` that are in check right now. */
+export function checkedEnemies(state: GameState, army: Army): Army[] {
+  return liveEnemiesOf(state, army).filter((e) => isInCheck(state.chess, e));
+}
+
+/**
+ * True when `chess` puts a live enemy of `army` in check that was not already in check
+ * (`before`, from `checkedEnemies`): only a newly created check counts as given by the mover.
+ */
+export function givesNewCheck(state: GameState, chess: ChessState, army: Army, before: Army[]): boolean {
+  return liveEnemiesOf(state, army).some((e) => !before.includes(e) && isInCheck(chess, e));
 }
 
 /** Players still in the game, clockwise from the first seat. */

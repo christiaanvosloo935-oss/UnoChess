@@ -1,6 +1,6 @@
 import { randomBytes, randomInt, randomUUID, timingSafeEqual } from 'node:crypto';
 import {
-  apply, createGame, viewFor,
+  apply, createGame, geometryFor, viewFor,
   type Action, type ChatMessage, type GameState, type PlayerId, type RoomInfo, type ServerMessage, type Variant,
 } from '@isachess/engine';
 
@@ -84,7 +84,7 @@ export class Rooms {
     this.rooms.set(gameId, {
       id: gameId,
       variant,
-      capacity: variant === 'three' ? 3 : 2,
+      capacity: geometryFor(variant).armies.length,
       seats: [seat],
       state: null,
       connections: {},

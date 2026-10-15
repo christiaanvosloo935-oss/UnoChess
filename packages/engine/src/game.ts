@@ -4,7 +4,7 @@ import { buildDeck, drawCards } from './deck.js';
 import { startChess } from './fen.js';
 import { geometryFor, type Variant } from './geometry.js';
 import { shuffle } from './rng.js';
-import { activePlayers, armyOf, ctxFor, inCheckNow, liveEnemiesOf, nextPlayer, opponentsOf } from './state.js';
+import { activePlayers, armyOf, checkedEnemies, ctxFor, givesNewCheck, inCheckNow, nextPlayer, opponentsOf } from './state.js';
 import type { Action, ApplyResult, Army, Card, EffectArgs, GameState, Move, PlayerId } from './types.js';
 
 export { activePlayers, armyOf, inCheckNow, nextPlayer, opponentsOf };
@@ -172,7 +172,7 @@ function resolveTarget(s: GameState, player: PlayerId, target?: PlayerId): Playe
 
 function tradeEffect(s: GameState, player: PlayerId, playedArmy: Army, target: PlayerId): void {
   [s.hands[player], s.hands[target]] = [s.hands[target], s.hands[player]];
-  log(s, player, 'traded hands');
+  log(s, player, `traded hands with ${ARMY_NAMES[armyOf(s, target)]}`);
   endCard(s, player, playedArmy);
 }
 
@@ -180,7 +180,7 @@ function reverseEffect(s: GameState, player: PlayerId, playedArmy: Army, target:
   const mine = armyOf(s, player);
   const theirs = armyOf(s, target);
   s.seats = { ...s.seats, [mine]: target, [theirs]: player };
-  log(s, player, 'switched sides');
+  log(s, player, `switched sides with ${ARMY_NAMES[theirs]}`);
   endCard(s, player, playedArmy);
 }
 
@@ -219,24 +219,20 @@ function makeMove(s: GameState, player: PlayerId, action: Extract<Action, { type
   const rookId = move.castle
     ? s.chess.board[geometryFor(s.variant).castling(army)![move.castle].rookFrom]!.id
     : null;
+  const checkedBefore = checkedEnemies(s, army);
   commitMove(s, player, move);
   phase.moved.push(piece.id);
   if (rookId) phase.moved.push(rookId);
   phase.movesLeft -= 1;
   phase.mustMove = false;
 
-  if (givesCheck(s, army)) {
+  if (givesNewCheck(s, s.chess, army, checkedBefore)) {
     log(s, player, 'Check!');
     return endCard(s, player, army);
   }
   if (phase.movesLeft === 0 || legalMoves(s.chess, army, ctxFor(s, army, phase.moved)).length === 0) {
     return endCard(s, player, army);
   }
-}
-
-/** True when any enemy of `army` that is still in the game is in check. */
-function givesCheck(s: GameState, army: Army): boolean {
-  return liveEnemiesOf(s, army).some((e) => isInCheck(s.chess, e));
 }
 
 /** Applies a chess move to the game state and records any capture. */
@@ -267,8 +263,9 @@ function shapeshiftEffect(s: GameState, player: PlayerId, playedArmy: Army, args
   );
   if (!move) return "That piece can't move like that.";
   log(s, player, `shapeshifted a ${PIECE_NAMES[s.chess.board[from]!.type]} into a ${PIECE_NAMES[args.as]}`);
+  const checkedBefore = checkedEnemies(s, army);
   commitMove(s, player, move);
-  if (givesCheck(s, army)) log(s, player, 'Check!');
+  if (givesNewCheck(s, s.chess, army, checkedBefore)) log(s, player, 'Check!');
   endCard(s, player, playedArmy);
 }
 
@@ -319,8 +316,11 @@ function advance(s: GameState): void {
 function eliminate(s: GameState, player: PlayerId, text: string): void {
   const army = armyOf(s, player);
   s.eliminated.push(player);
-  s.discardPile.push(...s.hands[player]);
-  s.hands[player] = [];
+  // The hand only goes to the discard pile when the game continues; a game that ends keeps it as it was.
+  if (activePlayers(s).length > 1) {
+    s.discardPile.push(...s.hands[player]);
+    s.hands[player] = [];
+  }
   s.effects.pendingSkips = s.effects.pendingSkips.filter((p) => p !== player);
   s.effects.frozen = s.effects.frozen.filter((f) => f.army !== army);
   s.effects.shields = s.effects.shields.filter((sh) => sh.owner !== player);
