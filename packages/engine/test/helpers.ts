@@ -1,4 +1,4 @@
-import { fromFen, type Card, type CardKind, type GameState } from '../src/index.js';
+import { fromFen, type Army, type Card, type CardKind, type GameState, type Square } from '../src/index.js';
 
 let counter = 0;
 export function card(kind: CardKind, value?: number): Card {
@@ -35,3 +35,7 @@ export function stateFrom(
 }
 
 export const sq = (name: string) => (Number(name[1]) - 1) * 8 + (name.charCodeAt(0) - 97);
+
+/** Three-player square: `hsq('w', 'e2')` is section w, file e, rank 2 (= 0*32 + 1*8 + 4). */
+export const hsq = (army: Army, name: string): Square =>
+  'wrb'.indexOf(army) * 32 + (Number(name[1]) - 1) * 8 + (name.charCodeAt(0) - 97);

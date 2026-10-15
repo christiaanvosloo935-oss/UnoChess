@@ -15,8 +15,10 @@ describe('classic geometry', () => {
 
   it('rook rays from a1', () => {
     const rays = g.orthRays[0];
-    expect(rays.length).toBe(2);
-    expect(rays.map((r) => r.length)).toEqual([7, 7]);
+    expect(rays).toEqual([
+      ['b1', 'c1', 'd1', 'e1', 'f1', 'g1', 'h1'].map(sq),
+      ['a2', 'a3', 'a4', 'a5', 'a6', 'a7', 'a8'].map(sq),
+    ]);
   });
 
   it('knight on e4 has 8 jumps and on a1 has 2', () => {

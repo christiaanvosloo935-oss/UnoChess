@@ -2,6 +2,7 @@ export * from './types.js';
 export * from './rng.js';
 export * from './fen.js';
 export * from './geometry.js';
+export { threeGeometry } from './geometry-three.js';
 export * from './chess.js';
 export * from './deck.js';
 export * from './state.js';

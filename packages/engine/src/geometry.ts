@@ -1,5 +1,6 @@
 import type { Army, PieceType, Square } from './types.js';
 import { classicGeometry } from './geometry-classic.js';
+import { threeGeometry } from './geometry-three.js';
 
 export type Variant = 'classic' | 'three';
 
@@ -31,8 +32,7 @@ export interface Geometry {
 }
 
 export function geometryFor(variant: Variant): Geometry {
-  if (variant === 'classic') return classicGeometry;
-  throw new Error('three-player geometry not implemented');
+  return variant === 'classic' ? classicGeometry : threeGeometry;
 }
 
 /** The armies that can attack `army`'s king. */
