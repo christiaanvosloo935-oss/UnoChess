@@ -142,11 +142,19 @@ form { display: flex; flex-direction: column; gap: 1rem; }
 }
 .sq.in-check { background-image: radial-gradient(circle, rgba(217, 41, 63, 0.9), rgba(217, 41, 63, 0) 75%); }
 .hexboard { position: relative; width: 100%; margin: 0 auto; }
-.hexboard .sq { position: absolute; display: flex; align-items: center; justify-content: center; padding: 0; border: 0; border-radius: 0; font-size: 1rem; }
-.hexboard .sq .piece-img { width: 62%; height: 62%; }
-.hexboard .sq.selectable, .hexboard .sq.selected { box-shadow: none; }
-.hexboard .sq.selectable { background-image: linear-gradient(rgba(23, 58, 48, 0.28), rgba(23, 58, 48, 0.28)); }
-.hexboard .sq.selected.selectable { background-image: linear-gradient(rgba(61, 169, 252, 0.5), rgba(61, 169, 252, 0.5)); }
+.hexboard .sq { position: absolute; display: flex; align-items: center; justify-content: center; padding: 0; border: 0; border-radius: 0; font-size: 1rem; background: none; box-shadow: none; pointer-events: none; }
+.hexboard .sq.light, .hexboard .sq.dark, .hexboard .sq.selected, .hexboard .sq.in-check { background: none; }
+/* The button itself is never clipped (pieces and ghosts animate across cell edges); the clipped face draws the cell and takes the clicks. */
+.hexboard .hex-face { position: absolute; inset: 0; pointer-events: auto; }
+.hexboard .sq.light > .hex-face { background-color: #eeeed2; }
+.hexboard .sq.dark > .hex-face { background-color: #769656; }
+.hexboard .sq.selectable > .hex-face { background-image: linear-gradient(rgba(23, 58, 48, 0.28), rgba(23, 58, 48, 0.28)); }
+.hexboard .sq.selectable, .hexboard .sq.target { cursor: pointer; }
+.hexboard .sq.selectable > .hex-face, .hexboard .sq.target > .hex-face { cursor: pointer; }
+.hexboard .sq.selected > .hex-face { background-image: linear-gradient(rgba(61, 169, 252, 0.5), rgba(61, 169, 252, 0.5)); }
+.hexboard .sq.in-check > .hex-face { background-image: radial-gradient(circle, rgba(217, 41, 63, 0.9), rgba(217, 41, 63, 0) 75%); }
+.hexboard .sq:focus-visible > .hex-face { background-image: linear-gradient(rgba(61, 169, 252, 0.4), rgba(61, 169, 252, 0.4)); }
+.hexboard .sq .piece-img { width: 62%; height: 62%; position: relative; }
 .coord { position: absolute; font-size: 0.6rem; font-weight: 700; pointer-events: none; }
 .sq.light .coord { color: #4f6b34; }
 .sq.dark .coord { color: #14240a; }

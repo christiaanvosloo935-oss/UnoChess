@@ -80,9 +80,9 @@ export function HexBoard({ view, selectable, targets, selected, onSquare }: Prop
               top: pct((y0 / layout.height) * 100),
               width: pct((w / layout.width) * 100),
               height: pct((h / layout.height) * 100),
-              clipPath: `polygon(${clip})`,
             }}
           >
+            <span className="hex-face" style={{ clipPath: `polygon(${clip})` }} />
             {piece && (
               <PieceIcon
                 army={piece.army}
