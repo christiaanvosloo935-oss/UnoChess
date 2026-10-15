@@ -1,4 +1,4 @@
-import type { PieceType, PlayerView, PromotionType } from '@isachess/engine';
+import type { Army, PieceType, PlayerView, PromotionType } from '@isachess/engine';
 import { PIECE_NAME } from './pieceNames';
 import { PieceIcon } from './PieceIcon';
 
@@ -14,7 +14,7 @@ function Modal({ title, children, onCancel }: { title: string; children: React.R
   );
 }
 
-export function PromotionPicker({ army, onPick, onCancel }: { army: 'w' | 'b'; onPick: (p: PromotionType) => void; onCancel: () => void }) {
+export function PromotionPicker({ army, onPick, onCancel }: { army: Army; onPick: (p: PromotionType) => void; onCancel: () => void }) {
   return (
     <Modal title="Promote to…" onCancel={onCancel}>
       {(['q', 'r', 'b', 'n'] as const).map((p) => (

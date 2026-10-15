@@ -50,7 +50,7 @@ describe('viewFor', () => {
   });
 
   it('exposes swap / freeze / shield / shapeshift / revive options for the current player', () => {
-    const s = stateFrom('4k3/8/8/8/8/8/PP6/R3K3 w Q - 0 1', { w: [card('wild')] }, { captured: { w: ['n'], b: [] } });
+    const s = stateFrom('4k3/8/8/8/8/8/PP6/R3K3 w Q - 0 1', { w: [card('wild')] }, { captured: { w: ['n'], r: [], b: [] } });
     const o = legalOptions(s, 'A');
     expect(o.swaps.length).toBeGreaterThan(0);
     expect(o.freezeTargets).toHaveLength(1);

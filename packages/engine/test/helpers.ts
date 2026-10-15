@@ -17,7 +17,7 @@ export function stateFrom(
   const filler = (id: string): Card => ({ id, kind: 'num', colour: 'red', value: 0 });
   const state: GameState = {
     chess,
-    captured: { w: [], b: [] },
+    captured: { w: [], r: [], b: [] },
     players: ['A', 'B'],
     seats: { w: 'A', b: 'B' },
     hands: { A: hands.w ?? [num(0)], B: hands.b ?? [num(0)] },

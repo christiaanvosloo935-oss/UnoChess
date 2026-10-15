@@ -14,7 +14,7 @@ export function createGame(seed: number, white: PlayerId, black: PlayerId): Game
   const [deck, nextSeed] = shuffle(buildDeck(), seed);
   return {
     chess: fromFen(START_FEN).chess,
-    captured: { w: [], b: [] },
+    captured: { w: [], r: [], b: [] },
     players: [white, black],
     seats: { w: white, b: black },
     hands: { [white]: deck.slice(0, HAND_SIZE), [black]: deck.slice(HAND_SIZE, HAND_SIZE * 2) },

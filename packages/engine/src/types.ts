@@ -1,4 +1,6 @@
-export type Army = 'w' | 'b';
+import type { Variant } from './geometry.js';
+
+export type Army = 'w' | 'r' | 'b';
 export type PieceType = 'p' | 'n' | 'b' | 'r' | 'q' | 'k';
 export type PromotionType = 'q' | 'r' | 'b' | 'n';
 export type Square = number;
@@ -10,18 +12,17 @@ export interface Piece {
   army: Army;
 }
 
-export interface Castling {
-  w: { k: boolean; q: boolean };
-  b: { k: boolean; q: boolean };
-}
+export type Castling = Record<Army, { k: boolean; q: boolean }>;
 
 export interface EnPassant {
   square: Square;
+  victim: Square; // the pawn that double-stepped
   capturer: Army;
   setOnTurn: number;
 }
 
 export interface ChessState {
+  variant: Variant;
   board: (Piece | null)[];
   castling: Castling;
   ep: EnPassant | null;
@@ -64,7 +65,7 @@ export interface GameEvent {
 
 export interface GameState {
   chess: ChessState;
-  captured: { w: PieceType[]; b: PieceType[] }; // pieces OF that army that were captured
+  captured: Record<Army, PieceType[]>; // pieces OF that army that were captured
   players: [PlayerId, PlayerId]; // [initial white, initial black]
   seats: { w: PlayerId; b: PlayerId };
   hands: Record<PlayerId, Card[]>;

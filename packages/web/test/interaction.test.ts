@@ -117,7 +117,7 @@ describe('targeted cards', () => {
 
   it('revive flow with a pawn returning as a queen', () => {
     const c = card('wild');
-    const s = stateFrom('4k3/8/8/8/8/8/8/4K3 w - - 0 1', { w: [c] }, { captured: { w: ['p'], b: [] } });
+    const s = stateFrom('4k3/8/8/8/8/8/8/4K3 w - - 0 1', { w: [c] }, { captured: { w: ['p'], r: [], b: [] } });
     const v = viewA(s);
     let r = step(v, IDLE, { type: 'clickCard', cardId: c.id, asOne: false });
     expect(highlights(v, r.sel).targets).toEqual([]);

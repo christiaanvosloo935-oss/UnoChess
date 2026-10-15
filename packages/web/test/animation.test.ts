@@ -72,7 +72,7 @@ describe('diffBoards', () => {
 
   it('a revived piece appears in place', () => {
     const wild = card('wild');
-    const before = stateFrom('4k3/8/8/8/8/8/8/4K3 w - - 0 1', { w: [wild] }, { captured: { w: ['n'], b: [] } });
+    const before = stateFrom('4k3/8/8/8/8/8/8/4K3 w - - 0 1', { w: [wild] }, { captured: { w: ['n'], r: [], b: [] } });
     const after = ok(before, 'A', play(wild, { type: 'revive', capturedIndex: 0, square: sq('b1') }));
     const diff = diffBoards(before.chess.board, after.chess.board);
     expect(diff.appeared).toEqual([{ id: after.chess.board[sq('b1')]!.id, square: sq('b1') }]);

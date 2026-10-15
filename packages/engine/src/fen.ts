@@ -26,18 +26,21 @@ export function fromFen(fen: string): { chess: ChessState; toMove: Army } {
   });
   const castling = {
     w: { k: castle.includes('K'), q: castle.includes('Q') },
+    r: { k: false, q: false },
     b: { k: castle.includes('k'), q: castle.includes('q') },
   };
   const toMove: Army = side === 'b' ? 'b' : 'w';
   let enPassant: ChessState['ep'] = null;
   if (ep && ep !== '-') {
+    const square = (Number(ep[1]) - 1) * 8 + (ep.charCodeAt(0) - 97);
     enPassant = {
-      square: (Number(ep[1]) - 1) * 8 + (ep.charCodeAt(0) - 97),
+      square,
+      victim: toMove === 'b' ? square + 8 : square - 8,
       capturer: toMove,
       setOnTurn: 0,
     };
   }
-  return { chess: { board, castling, ep: enPassant }, toMove };
+  return { chess: { variant: 'classic', board, castling, ep: enPassant }, toMove };
 }
 
 export function toFen(chess: ChessState, toMove: Army): string {
