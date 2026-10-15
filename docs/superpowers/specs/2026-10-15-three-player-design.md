@@ -70,7 +70,10 @@ from their own edge); the board is drawn with the viewer's army at the bottom.
   opponent on their right (White's c-file continues as Red's f-file, down to Red's rank 1).
 - **Ranks** stay inside a player's own area.
 - **Diagonals** follow the same joins. The six squares at the centre (every player's d4 and e4) form the
-  rosette; a diagonal through the centre point **splits**, so a bishop or queen may continue along either branch.
+  rosette, a ring of six around the centre point. A diagonal that reaches the centre **branches onto the other
+  three rosette squares** (the ones that touch the centre only at its corner), and from each of those it carries
+  on outward along that square's long diagonal. So a bishop or queen may continue along any of three branches,
+  and a pawn on a rosette square can capture on all three.
 - **Knights and kings** move by the same neighbour rules. A king's neighbours are its orthogonal and diagonal neighbours.
 - **Pawns** move toward the centre and continue along the file into whichever opponent's area it leads to; they capture
   diagonally forward, double-step from their own rank 2, and en passant works as normal.
@@ -125,7 +128,7 @@ from their own edge); the board is drawn with the viewer's army at the bottom.
 
 ## 9. Assumptions to confirm
 
-1. The rosette diagonal split in §4 matches the board used by the rules author.
+1. The three-way branching of diagonals at the rosette in §4 matches the board used by the rules author, and ranks do not wrap around the corners of the hexagon (a rook on a rank stops at the edge of its own area).
 2. Eliminated players' pieces still give check and block, but cannot move.
 3. A pawn's double step is from its own rank 2, and en passant is per normal chess against the army that just moved.
 4. Rematch rotates seats one place rather than reshuffling arbitrarily.
