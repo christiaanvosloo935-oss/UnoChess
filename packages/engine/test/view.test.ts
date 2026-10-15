@@ -84,6 +84,7 @@ describe('viewFor', () => {
 
   it('three-player view lists two opponents with hand counts and hides every other hand', () => {
     const s = threeState();
+    expect(s.drawPile.length).toBeGreaterThan(0);
     for (const me of s.players) {
       const view = viewFor(s, me);
       const json = JSON.stringify(view);
@@ -113,6 +114,19 @@ describe('viewFor', () => {
     const inCheck = viewFor(s, 'A').inCheck;
     expect([...inCheck].sort()).toEqual(['r', 'w']);
     expect(viewFor(threeState(), 'A').inCheck).toEqual([]);
+  });
+
+  it('inCheck excludes an eliminated army', () => {
+    const s = {
+      ...hexState({
+        pieces: [
+          ['w', 'k', 'w.e1'], ['r', 'k', 'r.e1'], ['b', 'k', 'b.e1'],
+          ['r', 'r', 'w.e3'], ['w', 'r', 'r.e3'],
+        ],
+      }),
+      eliminated: ['B'],
+    };
+    expect(viewFor(s, 'A').inCheck).toEqual(['w']);
   });
 
   it('options.targets is the active opponents on your turn and empty otherwise', () => {
