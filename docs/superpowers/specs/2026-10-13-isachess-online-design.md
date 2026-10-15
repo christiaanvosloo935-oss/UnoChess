@@ -2,6 +2,9 @@
 
 **Date:** 2026-10-13
 **Status:** Approved in conversation, awaiting written-spec review
+
+Three-player mode extends this spec: see 2026-10-15-three-player-design.md.
+
 **Source rules:** *IsaChess — House Rules, v1.0* (Christiaan, October 2026)
 
 ## 1. Goal

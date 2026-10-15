@@ -16,7 +16,7 @@ describe('fen', () => {
     expect(toMove).toBe('w');
     expect(chess.board[4]).toMatchObject({ type: 'k', army: 'w' });
     expect(chess.board[60]).toMatchObject({ type: 'k', army: 'b' });
-    expect(chess.castling).toEqual({ w: { k: true, q: true }, b: { k: true, q: true } });
+    expect(chess.castling).toEqual({ w: { k: true, q: true }, r: { k: false, q: false }, b: { k: true, q: true } });
     expect(chess.ep).toBeNull();
   });
 
@@ -29,6 +29,6 @@ describe('fen', () => {
 
   it('reads an en passant square', () => {
     const { chess } = fromFen('4k3/8/8/3pP3/8/8/8/4K3 w - d6 0 1');
-    expect(chess.ep).toEqual({ square: 43, capturer: 'w', setOnTurn: 0 });
+    expect(chess.ep).toEqual({ square: 43, victim: 35, capturer: 'w', setOnTurn: 0 });
   });
 });

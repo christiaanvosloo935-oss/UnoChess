@@ -1,30 +1,42 @@
 import { applyChessMove, isInCheck, legalMoves, movesAs } from './chess.js';
 import { legalFreezeTargets, legalRevives, legalShapeshifts, legalShieldTargets, legalSwaps, playableCards, squareOfPiece, swapSquares } from './cards.js';
 import { buildDeck, drawCards } from './deck.js';
-import { fromFen, START_FEN } from './fen.js';
+import { startChess } from './fen.js';
+import { geometryFor, type Variant } from './geometry.js';
 import { shuffle } from './rng.js';
-import { armyOf, ctxFor, inCheckNow, opponentOf } from './state.js';
+import { activePlayers, armyOf, checkedEnemies, ctxFor, givesNewCheck, inCheckNow, nextPlayer, opponentsOf } from './state.js';
 import type { Action, ApplyResult, Army, Card, EffectArgs, GameState, Move, PlayerId } from './types.js';
 
-export { armyOf, inCheckNow, opponentOf };
+export { activePlayers, armyOf, inCheckNow, nextPlayer, opponentsOf };
 
 const HAND_SIZE = 7;
 
-export function createGame(seed: number, white: PlayerId, black: PlayerId): GameState {
+/** `players` are listed clockwise and seated on the variant's armies in order; the first moves first. */
+export function createGame(seed: number, players: PlayerId[], variant: Variant = 'classic'): GameState {
   const [deck, nextSeed] = shuffle(buildDeck(), seed);
+  const armies = geometryFor(variant).armies;
+  if (players.length !== armies.length) {
+    throw new Error(`The ${variant} variant needs ${armies.length} players, got ${players.length}.`);
+  }
+  const seats: GameState['seats'] = {};
+  armies.forEach((army, i) => { seats[army] = players[i]; });
+  const hands: GameState['hands'] = {};
+  players.forEach((p, i) => { hands[p] = deck.slice(i * HAND_SIZE, (i + 1) * HAND_SIZE); });
   return {
-    chess: fromFen(START_FEN).chess,
-    captured: { w: [], b: [] },
-    players: [white, black],
-    seats: { w: white, b: black },
-    hands: { [white]: deck.slice(0, HAND_SIZE), [black]: deck.slice(HAND_SIZE, HAND_SIZE * 2) },
-    drawPile: deck.slice(HAND_SIZE * 2),
+    variant,
+    chess: startChess(variant),
+    captured: { w: [], r: [], b: [] },
+    players: [...players],
+    seats,
+    eliminated: [],
+    hands,
+    drawPile: deck.slice(HAND_SIZE * players.length),
     discardPile: [],
     seed: nextSeed,
-    current: white,
+    current: players[0],
     turn: 1,
     phase: { kind: 'awaitingCard' },
-    effects: { frozen: [], shields: [], pendingSkip: null },
+    effects: { frozen: [], shields: [], pendingSkips: [] },
     nextPieceId: 0,
     log: [],
   };
@@ -56,11 +68,8 @@ export function apply(state: GameState, player: PlayerId, action: Action): Apply
 
 function dispatch(s: GameState, player: PlayerId, action: Action): string | void {
   if (s.phase.kind === 'over') return 'The game is over.';
-  if (action.type === 'resign') {
-    s.phase = { kind: 'over', winner: opponentOf(s, player), reason: 'resign' };
-    log(s, player, 'resigned');
-    return;
-  }
+  if (s.eliminated.includes(player)) return 'You have been eliminated.';
+  if (action.type === 'resign') return resign(s, player);
   if (player !== s.current) return "It's not your turn.";
   switch (action.type) {
     case 'playCard': return playCard(s, player, action);
@@ -83,6 +92,12 @@ function playCard(s: GameState, player: PlayerId, action: Extract<Action, { type
     return 'You are in check: play a card that escapes it, or play any card as a 1.';
   }
   const playedArmy = armyOf(s, player);
+  let target = player;
+  if (!asOne && TARGETED.includes(card.kind === 'num' ? `n${card.value}` : card.kind)) {
+    const resolved = resolveTarget(s, player, action.target);
+    if (typeof resolved !== 'string') return resolved.error;
+    target = resolved;
+  }
   hand.splice(idx, 1);
   s.discardPile.push(card);
   s.lastPlayed = { player, card, asOne };
@@ -97,12 +112,12 @@ function playCard(s: GameState, player: PlayerId, action: Extract<Action, { type
       if (card.value === 6) return swapEffect(s, player, playedArmy, args);
       if (card.value === 7) return freezeEffect(s, player, playedArmy, args);
       if (card.value === 8) return shapeshiftEffect(s, player, playedArmy, args);
-      if (card.value === 9) return tradeEffect(s, player, playedArmy);
+      if (card.value === 9) return tradeEffect(s, player, playedArmy, target);
       return 'That card is not implemented yet.';
     case 'skip': return shieldEffect(s, player, playedArmy, args);
-    case 'reverse': return reverseEffect(s, player, playedArmy);
-    case 'draw2': return penaltyEffect(s, player, playedArmy, 2);
-    case 'wild4': return penaltyEffect(s, player, playedArmy, 4);
+    case 'reverse': return reverseEffect(s, player, playedArmy, target);
+    case 'draw2': return penaltyEffect(s, player, playedArmy, target, 2);
+    case 'wild4': return penaltyEffect(s, player, playedArmy, target, 4);
     case 'wild': return reviveEffect(s, player, playedArmy, args);
   }
 }
@@ -144,27 +159,40 @@ function shieldEffect(s: GameState, player: PlayerId, playedArmy: Army, args?: E
   endCard(s, player, playedArmy);
 }
 
-function tradeEffect(s: GameState, player: PlayerId, playedArmy: Army): void {
-  const other = opponentOf(s, player);
-  [s.hands[player], s.hands[other]] = [s.hands[other], s.hands[player]];
-  log(s, player, 'traded hands');
+/** Cards that name an opponent: 9, Reverse, +2 and +4. */
+const TARGETED = ['n9', 'reverse', 'draw2', 'wild4'];
+
+/** The chosen opponent, filled in automatically when only one is left. */
+function resolveTarget(s: GameState, player: PlayerId, target?: PlayerId): PlayerId | { error: string } {
+  const opponents = opponentsOf(s, player);
+  if (target === undefined) {
+    return opponents.length === 1 ? opponents[0] : { error: 'Choose which opponent.' };
+  }
+  return opponents.includes(target) ? target : { error: "You can't choose that player." };
+}
+
+function tradeEffect(s: GameState, player: PlayerId, playedArmy: Army, target: PlayerId): void {
+  [s.hands[player], s.hands[target]] = [s.hands[target], s.hands[player]];
+  log(s, player, `traded hands with ${ARMY_NAMES[armyOf(s, target)]}`);
   endCard(s, player, playedArmy);
 }
 
-function reverseEffect(s: GameState, player: PlayerId, playedArmy: Army): void {
-  s.seats = { w: s.seats.b, b: s.seats.w };
-  log(s, player, 'switched sides');
+function reverseEffect(s: GameState, player: PlayerId, playedArmy: Army, target: PlayerId): void {
+  const mine = armyOf(s, player);
+  const theirs = armyOf(s, target);
+  s.seats = { ...s.seats, [mine]: target, [theirs]: player };
+  log(s, player, `switched sides with ${ARMY_NAMES[theirs]}`);
   endCard(s, player, playedArmy);
 }
 
-function penaltyEffect(s: GameState, player: PlayerId, playedArmy: Army, count: number): void {
-  const other = opponentOf(s, player);
-  const drawn = drawFor(s, other, count);
-  s.effects.pendingSkip = other;
-  log(s, player, `made their opponent draw ${drawn}`);
+function penaltyEffect(s: GameState, player: PlayerId, playedArmy: Army, target: PlayerId, count: number): void {
+  const drawn = drawFor(s, target, count);
+  if (!s.effects.pendingSkips.includes(target)) s.effects.pendingSkips.push(target);
+  log(s, player, `made ${ARMY_NAMES[armyOf(s, target)]} draw ${drawn}`);
   endCard(s, player, playedArmy);
 }
 
+const ARMY_NAMES = { w: 'White', r: 'Red', b: 'Black' } as const;
 const PIECE_NAMES = { p: 'pawn', n: 'knight', b: 'bishop', r: 'rook', q: 'queen', k: 'king' } as const;
 
 function startMoving(s: GameState, player: PlayerId, cardId: string, movesLeft: number): void {
@@ -190,16 +218,16 @@ function makeMove(s: GameState, player: PlayerId, action: Extract<Action, { type
   if (!move) return candidates.some((m) => m.promotion) ? 'Choose a promotion piece' : "That move isn't legal.";
 
   const rookId = move.castle
-    ? s.chess.board[(action.from >> 3) * 8 + (move.castle === 'k' ? 7 : 0)]!.id
+    ? s.chess.board[geometryFor(s.variant).castling(army)![move.castle].rookFrom]!.id
     : null;
+  const checkedBefore = checkedEnemies(s, army);
   commitMove(s, player, move);
   phase.moved.push(piece.id);
   if (rookId) phase.moved.push(rookId);
   phase.movesLeft -= 1;
   phase.mustMove = false;
 
-  const opponent: Army = army === 'w' ? 'b' : 'w';
-  if (isInCheck(s.chess, opponent)) {
+  if (givesNewCheck(s, s.chess, army, checkedBefore)) {
     log(s, player, 'Check!');
     return endCard(s, player, army);
   }
@@ -210,7 +238,8 @@ function makeMove(s: GameState, player: PlayerId, action: Extract<Action, { type
 
 /** Applies a chess move to the game state and records any capture. */
 function commitMove(s: GameState, player: PlayerId, move: Move): void {
-  const result = applyChessMove(s.chess, move, s.turn);
+  const nextMover = armyOf(s, nextPlayer(s, player));
+  const result = applyChessMove(s.chess, move, s.turn, nextMover);
   s.chess = result.chess;
   if (result.captured) {
     s.captured[result.captured.army].push(result.captured.type);
@@ -235,8 +264,9 @@ function shapeshiftEffect(s: GameState, player: PlayerId, playedArmy: Army, args
   );
   if (!move) return "That piece can't move like that.";
   log(s, player, `shapeshifted a ${PIECE_NAMES[s.chess.board[from]!.type]} into a ${PIECE_NAMES[args.as]}`);
+  const checkedBefore = checkedEnemies(s, army);
   commitMove(s, player, move);
-  if (isInCheck(s.chess, army === 'w' ? 'b' : 'w')) log(s, player, 'Check!');
+  if (givesNewCheck(s, s.chess, army, checkedBefore)) log(s, player, 'Check!');
   endCard(s, player, playedArmy);
 }
 
@@ -266,25 +296,97 @@ function doneMoving(s: GameState, player: PlayerId): string | void {
   return endCard(s, player, armyOf(s, player));
 }
 
-/** Finishes the current card: draw step, expire effects, pass the turn, then judge the new position. */
+/** Finishes the current card: draw step, expire effects, pass the turn, then start the next player's turn. */
 export function endCard(s: GameState, player: PlayerId, playedArmy: Army): void {
   if (s.hands[player].length < HAND_SIZE) drawFor(s, player, 1);
   s.effects.frozen = s.effects.frozen.filter((f) => f.army !== playedArmy);
   if (s.chess.ep && s.chess.ep.setOnTurn !== s.turn) s.chess.ep = null;
   s.turn += 1;
-  s.current = opponentOf(s, player);
+  s.current = nextPlayer(s, player);
+  beginTurn(s);
+}
+
+/** Passes the turn past `s.current` (who may already be eliminated) without a card. */
+function advance(s: GameState): void {
+  s.chess.ep = null;
+  s.turn += 1;
+  s.current = nextPlayer(s, s.current);
+}
+
+/** Removes a player from the game: their hand is discarded and their effects end. Their pieces stay on the board. */
+function eliminate(s: GameState, player: PlayerId, text: string): void {
+  const army = armyOf(s, player);
+  s.eliminated.push(player);
+  // The hand only goes to the discard pile when the game continues; a game that ends keeps it as it was.
+  if (activePlayers(s).length > 1) {
+    s.discardPile.push(...s.hands[player]);
+    s.hands[player] = [];
+  }
+  s.effects.pendingSkips = s.effects.pendingSkips.filter((p) => p !== player);
+  s.effects.frozen = s.effects.frozen.filter((f) => f.army !== army);
+  s.effects.shields = s.effects.shields.filter((sh) => sh.owner !== player);
+  log(s, player, text);
+}
+
+function resign(s: GameState, player: PlayerId): void {
+  const wasCurrent = player === s.current;
+  eliminate(s, player, 'resigned');
+  const left = activePlayers(s);
+  if (left.length === 1) {
+    s.phase = { kind: 'over', winner: left[0], reason: 'resign' };
+  } else if (wasCurrent) {
+    advance(s);
+    beginTurn(s);
+  }
+}
+
+/**
+ * Starts the turn of `s.current`, passing over players who cannot play. Each pass of the loop
+ * either stops on a playable mover, ends the game, or moves on after exactly one of: a pending
+ * skip consumed (finitely many), a player eliminated (at most the player count), or a stalemate
+ * skip. `stalled` counts consecutive stalemate skips and resets whenever the position or the
+ * set of skippable players changes, so it reaches the active player count only when every
+ * active player is stalemated in a row, which is a draw. The loop therefore terminates.
+ */
+function beginTurn(s: GameState): void {
+  let stalled = 0;
   for (;;) {
     s.effects.shields = s.effects.shields.filter((sh) => sh.owner !== s.current);
-    if (s.effects.pendingSkip !== s.current) break;
-    s.effects.pendingSkip = null;
-    log(s, s.current, 'skips their turn');
-    s.chess.ep = null;
-    s.turn += 1;
-    s.current = opponentOf(s, s.current);
+    const skip = s.effects.pendingSkips.indexOf(s.current);
+    if (skip >= 0) {
+      s.effects.pendingSkips.splice(skip, 1);
+      log(s, s.current, 'skips their turn');
+      advance(s);
+      stalled = 0;
+      continue;
+    }
+    const army = armyOf(s, s.current);
+    const ctx = ctxFor(s, army);
+    if (isInCheck(s.chess, army)) {
+      if (legalMoves(s.chess, army, ctx).length > 0) break;
+      eliminate(s, s.current, 'is checkmated');
+      const left = activePlayers(s);
+      if (left.length === 1) {
+        s.phase = { kind: 'over', winner: left[0], reason: 'checkmate' };
+        return;
+      }
+      advance(s);
+      stalled = 0;
+      continue;
+    }
+    // Frozen pieces do not make a stalemate: only the ordinary chess moves count.
+    if (legalMoves(s.chess, army, { ...ctx, frozen: new Set() }).length > 0) break;
+    log(s, s.current, 'is stalemated');
+    stalled += 1;
+    if (activePlayers(s).length <= 2 || stalled >= activePlayers(s).length) {
+      s.phase = { kind: 'over', winner: null, reason: 'stalemate' };
+      return;
+    }
+    advance(s);
   }
   // Trade Hands can leave a player with nothing to play; they draw one so the game never stalls.
   if (s.hands[s.current].length === 0) drawFor(s, s.current, 1);
-  judge(s);
+  s.phase = { kind: 'awaitingCard' };
 }
 
 /** Moves up to n cards from the draw pile (reshuffling the discard pile when needed) into a player's hand. */
@@ -295,21 +397,4 @@ function drawFor(s: GameState, player: PlayerId, n: number): number {
   s.discardPile = drawn.piles.discardPile;
   s.seed = drawn.piles.seed;
   return drawn.cards.length;
-}
-
-function judge(s: GameState): void {
-  const army = armyOf(s, s.current);
-  const ctx = ctxFor(s, army);
-  if (isInCheck(s.chess, army)) {
-    if (legalMoves(s.chess, army, ctx).length === 0) {
-      s.phase = { kind: 'over', winner: opponentOf(s, s.current), reason: 'checkmate' };
-      log(s, s.current, 'is checkmated');
-      return;
-    }
-  } else if (legalMoves(s.chess, army, { ...ctx, frozen: new Set() }).length === 0) {
-    s.phase = { kind: 'over', winner: null, reason: 'stalemate' };
-    log(s, s.current, 'is stalemated');
-    return;
-  }
-  s.phase = { kind: 'awaitingCard' };
 }

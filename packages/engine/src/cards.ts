@@ -1,5 +1,6 @@
+import { geometryFor } from './geometry.js';
 import { isInCheck, movesAs, revokeCastling } from './chess.js';
-import { armyOf, ctxFor as ctxForArmy, inCheckNow, opponentOf } from './state.js';
+import { armyOf, ctxFor as ctxForArmy, checkedEnemies, givesNewCheck, inCheckNow, isDeadArmy } from './state.js';
 import type { Army, Card, ChessState, GameState, PieceType, PlayerId, PromotionType, Square } from './types.js';
 
 export interface PlayableCard {
@@ -12,7 +13,7 @@ export interface PlayableCard {
 export function swapSquares(chess: ChessState, a: Square, b: Square): ChessState {
   const board = chess.board.slice();
   [board[a], board[b]] = [board[b], board[a]];
-  return { board, castling: revokeCastling(chess.castling, a, b), ep: chess.ep };
+  return { ...chess, board, castling: revokeCastling(chess.variant, chess.castling, a, b) };
 }
 
 function squareOfPiece(chess: ChessState, id: string): Square {
@@ -22,8 +23,8 @@ function squareOfPiece(chess: ChessState, id: string): Square {
 /** Unordered pairs (ids sorted ascending) of own pieces that may legally swap. A frozen piece can't be moved, so it can't be swapped. */
 export function legalSwaps(state: GameState, player: PlayerId): [string, string][] {
   const army = armyOf(state, player);
-  const enemy: Army = army === 'w' ? 'b' : 'w';
-  const lastRank = army === 'w' ? 7 : 0;
+  const geo = geometryFor(state.chess.variant);
+  const before = checkedEnemies(state, army);
   const frozen = new Set(state.effects.frozen.filter((f) => f.army === army).map((f) => f.pieceId));
   const own = state.chess.board
     .map((p, sq) => ({ p, sq }))
@@ -32,8 +33,8 @@ export function legalSwaps(state: GameState, player: PlayerId): [string, string]
   for (let i = 0; i < own.length; i++) {
     for (let j = i + 1; j < own.length; j++) {
       const next = swapSquares(state.chess, own[i].sq, own[j].sq);
-      const pawnOnLastRank = [own[i].sq, own[j].sq].some((sq) => next.board[sq]!.type === 'p' && sq >> 3 === lastRank);
-      if (pawnOnLastRank || isInCheck(next, army) || isInCheck(next, enemy)) continue;
+      const pawnOnLastRank = [own[i].sq, own[j].sq].some((sq) => next.board[sq]!.type === 'p' && geo.isPromotionSquare(army, sq));
+      if (pawnOnLastRank || isInCheck(next, army) || givesNewCheck(state, next, army, before)) continue;
       const [x, y] = [own[i].p.id, own[j].p.id].sort();
       out.push([x, y]);
     }
@@ -43,7 +44,7 @@ export function legalSwaps(state: GameState, player: PlayerId): [string, string]
 
 export function legalFreezeTargets(state: GameState, player: PlayerId): string[] {
   const army = armyOf(state, player);
-  return state.chess.board.filter((p) => p && p.army !== army).map((p) => p!.id);
+  return state.chess.board.filter((p) => p && p.army !== army && !isDeadArmy(state, p.army)).map((p) => p!.id);
 }
 
 export function legalShieldTargets(state: GameState, player: PlayerId): string[] {
@@ -51,7 +52,7 @@ export function legalShieldTargets(state: GameState, player: PlayerId): string[]
   return state.chess.board.filter((p) => p && p.army === army && p.type !== 'k').map((p) => p!.id);
 }
 
-export { squareOfPiece, opponentOf };
+export { squareOfPiece };
 
 export interface ShapeshiftOption {
   pieceId: string;
@@ -88,8 +89,8 @@ export interface ReviveOption {
 /** Captured pieces that may return to an empty square in the first two rows without giving check. */
 export function legalRevives(state: GameState, player: PlayerId): ReviveOption[] {
   const army = armyOf(state, player);
-  const enemy: Army = army === 'w' ? 'b' : 'w';
-  const squares = army === 'w' ? range(0, 16) : range(48, 64);
+  const before = checkedEnemies(state, army);
+  const squares = geometryFor(state.chess.variant).reviveSquares(army);
   const out: ReviveOption[] = [];
   state.captured[army].forEach((type, capturedIndex) => {
     for (const asQueen of type === 'p' ? [false, true] : [false]) {
@@ -98,15 +99,13 @@ export function legalRevives(state: GameState, player: PlayerId): ReviveOption[]
         const board = state.chess.board.slice();
         board[square] = { id: 'probe', type: asQueen ? 'q' : type, army };
         const next = { ...state.chess, board };
-        if (isInCheck(next, army) || isInCheck(next, enemy)) continue;
+        if (isInCheck(next, army) || givesNewCheck(state, next, army, before)) continue;
         out.push({ capturedIndex, square, asQueen });
       }
     }
   });
   return out;
 }
-
-const range = (from: number, to: number) => Array.from({ length: to - from }, (_, i) => from + i);
 
 function escapesCheck(state: GameState, player: PlayerId, card: Card): boolean {
   if (card.kind === 'wild') return legalRevives(state, player).length > 0;

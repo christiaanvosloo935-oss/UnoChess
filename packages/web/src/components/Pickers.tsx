@@ -1,4 +1,5 @@
-import type { PieceType, PlayerView, PromotionType } from '@isachess/engine';
+import type { Army, PieceType, PlayerView, PromotionType } from '@isachess/engine';
+import { ARMY_NAME } from './ArmyName';
 import { PIECE_NAME } from './pieceNames';
 import { PieceIcon } from './PieceIcon';
 
@@ -14,7 +15,7 @@ function Modal({ title, children, onCancel }: { title: string; children: React.R
   );
 }
 
-export function PromotionPicker({ army, onPick, onCancel }: { army: 'w' | 'b'; onPick: (p: PromotionType) => void; onCancel: () => void }) {
+export function PromotionPicker({ army, onPick, onCancel }: { army: Army; onPick: (p: PromotionType) => void; onCancel: () => void }) {
   return (
     <Modal title="Promote to…" onCancel={onCancel}>
       {(['q', 'r', 'b', 'n'] as const).map((p) => (
@@ -60,6 +61,21 @@ export function RevivePicker({ view, onPick, onCancel }: { view: PlayerView; onP
           </button>
         );
       })}
+    </Modal>
+  );
+}
+
+export function TargetPicker({ view, names, onPick, onCancel }: { view: PlayerView; names: Record<string, string>; onPick: (id: string) => void; onCancel: () => void }) {
+  const active = view.opponents.filter((o) => view.options.targets.includes(o.id));
+  return (
+    <Modal title="Which opponent?" onCancel={onCancel}>
+      {active.map((o) => (
+        <button key={o.id} type="button" className="choice" onClick={() => onPick(o.id)} data-testid={`target-${o.id}`}>
+          <span className={`army-dot army-${o.army}`} aria-hidden="true" />
+          {names[o.id] ?? 'Player'}
+          <span className="muted">{ARMY_NAME[o.army]}</span>
+        </button>
+      ))}
     </Modal>
   );
 }

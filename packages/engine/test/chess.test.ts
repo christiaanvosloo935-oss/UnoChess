@@ -83,7 +83,7 @@ describe('effect context', () => {
   it('a pawn double step sets the en passant square for the opponent', () => {
     const { chess } = fromFen(START_FEN);
     const { chess: after } = applyChessMove(chess, { from: sqOf('e2'), to: sqOf('e4') }, 5);
-    expect(after.ep).toEqual({ square: sqOf('e3'), capturer: 'b', setOnTurn: 5 });
+    expect(after.ep).toEqual({ square: sqOf('e3'), victim: sqOf('e4'), capturer: 'b', setOnTurn: 5 });
   });
 });
 

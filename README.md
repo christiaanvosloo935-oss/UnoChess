@@ -4,8 +4,17 @@
 
 **Play it now: <https://isachess.onrender.com>**
 
-Play **IsaChess** — chess where the cards decide how you move — against a friend, each on your own device.
-You create a game, send your friend the link, and play. No accounts.
+Play **IsaChess** — chess where the cards decide how you move — with a friend (2 players) or with two friends (3 players), each on your own device.
+On the opening page you pick **2-player game** or **3-player game**, send the link to the others, and play. No accounts.
+
+### Three-player mode
+
+- The board is a 96-square hexagon shared by three armies: White, Red and Black.
+- A player who is checkmated at the start of their turn is eliminated; their pieces stay on the board but cannot move.
+- The last player with a king wins.
+- Cards that name an opponent let you choose which one.
+
+The design is in `docs/superpowers/specs/2026-10-15-three-player-design.md`.
 
 The house rules are in `docs/superpowers/specs/2026-10-13-isachess-online-design.md`
 (the rulebook's rules plus every clarification we agreed on). The build plan is in `docs/superpowers/plans/`.
@@ -39,7 +48,7 @@ npm run dev -w @isachess/web        # http://localhost:5173 (proxies to the serv
 ### End-to-end test
 
 `npm run e2e` builds the app, starts it on port 4173 with a fixed card shuffle (`ISACHESS_SEED`),
-and plays a game between two real browser windows. It uses the Chromium already installed at
+and plays a 2-player and a 3-player game between real browser windows. It uses the Chromium already installed at
 `/opt/pw-browsers/chromium`; adjust `e2e/playwright.config.ts` if yours lives elsewhere.
 
 ## Put it on the internet (Render)
@@ -47,7 +56,7 @@ and plays a game between two real browser windows. It uses the Chromium already 
 1. Create a free account at <https://render.com> and connect your GitHub account.
 2. **New → Blueprint**, pick this repository and the branch you want to publish.
 3. Render reads `render.yaml` (which follows the `main` branch and redeploys automatically whenever `main` changes), builds, and gives you your address, which comes from the service name in `render.yaml`. The live game is at <https://isachess.onrender.com>.
-4. Open it, click **New game**, and send the game link to your friend.
+4. Open it, click **2-player game** or **3-player game**, and send the game link to your friends.
 
 Notes:
 - Free Render services go to sleep when idle and restart when visited. Games are kept in memory only,
@@ -61,3 +70,5 @@ Logo: drawn for IsaChess (a pawn and a reverse card).
 Chess piece artwork: the "Cburnett" set by Colin M.L. Burnett, from
 [Wikimedia Commons](https://commons.wikimedia.org/wiki/Category:SVG_chess_pieces)
 (used under the BSD / GPLv2+ / CC BY-SA 3.0 licences it is offered under). Files are in `packages/web/public/pieces/`.
+
+Red pieces: a recolour of the same set.

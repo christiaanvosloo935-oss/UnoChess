@@ -1,3 +1,4 @@
+import { geometryFor, type Variant } from './geometry.js';
 import type { Army, ChessState, Piece, PieceType } from './types.js';
 
 export const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
@@ -26,18 +27,21 @@ export function fromFen(fen: string): { chess: ChessState; toMove: Army } {
   });
   const castling = {
     w: { k: castle.includes('K'), q: castle.includes('Q') },
+    r: { k: false, q: false },
     b: { k: castle.includes('k'), q: castle.includes('q') },
   };
   const toMove: Army = side === 'b' ? 'b' : 'w';
   let enPassant: ChessState['ep'] = null;
   if (ep && ep !== '-') {
+    const square = (Number(ep[1]) - 1) * 8 + (ep.charCodeAt(0) - 97);
     enPassant = {
-      square: (Number(ep[1]) - 1) * 8 + (ep.charCodeAt(0) - 97),
+      square,
+      victim: toMove === 'b' ? square + 8 : square - 8,
       capturer: toMove,
       setOnTurn: 0,
     };
   }
-  return { chess: { board, castling, ep: enPassant }, toMove };
+  return { chess: { variant: 'classic', board, castling, ep: enPassant }, toMove };
 }
 
 export function toFen(chess: ChessState, toMove: Army): string {
@@ -65,4 +69,25 @@ export function toFen(chess: ChessState, toMove: Army): string {
     ? String.fromCharCode(97 + (chess.ep.square % 8)) + (Math.floor(chess.ep.square / 8) + 1)
     : '-';
   return `${rows.join('/')} ${toMove} ${castle} ${ep} 0 1`;
+}
+
+/** The full starting position of a variant, with every castling right granted. */
+export function startChess(variant: Variant): ChessState {
+  const geo = geometryFor(variant);
+  const board: (Piece | null)[] = new Array(geo.size).fill(null);
+  const counters: Record<string, number> = {};
+  for (const { sq, army, type } of geo.startPieces()) {
+    const key = army + type;
+    const n = counters[key] ?? 0;
+    counters[key] = n + 1;
+    board[sq] = { id: `${key}${n}`, type, army };
+  }
+  const full = { k: true, q: true };
+  const none = { k: false, q: false };
+  const castling = {
+    w: geo.armies.includes('w') ? { ...full } : { ...none },
+    r: geo.armies.includes('r') ? { ...full } : { ...none },
+    b: geo.armies.includes('b') ? { ...full } : { ...none },
+  };
+  return { variant, board, castling, ep: null };
 }

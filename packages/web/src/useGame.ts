@@ -4,7 +4,7 @@ import { getSeat, setSeat } from './seat';
 
 export type GameConn =
   | { status: 'connecting' | 'reconnecting' }
-  | { status: 'lobby'; names: string[] }
+  | { status: 'lobby'; names: string[]; needed: number }
   | { status: 'playing'; view: PlayerView; room: RoomInfo }
   | { status: 'gone'; reason: 'not-found' | 'full' };
 
@@ -37,7 +37,7 @@ export function useGame(gameId: string, nickname: string | null) {
         switch (msg.type) {
           case 'joined': setSeat(gameId, msg.seatToken); setMe(msg.playerId); break;
           case 'chat': setChat((c) => [...c, msg.message].slice(-CHAT_KEEP)); break;
-          case 'lobby': setConn({ status: 'lobby', names: msg.names }); break;
+          case 'lobby': setConn({ status: 'lobby', names: msg.names, needed: msg.needed }); break;
           case 'state': setConn({ status: 'playing', view: msg.view, room: msg.room }); break;
           case 'error': setError((e) => ({ text: msg.message, n: (e?.n ?? 0) + 1 })); break;
           case 'gone':

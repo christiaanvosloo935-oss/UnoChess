@@ -42,15 +42,19 @@ function json(res: ServerResponse, status: number, payload: unknown): void {
 
 async function createGame(req: IncomingMessage, res: ServerResponse, rooms: Rooms): Promise<void> {
   let nickname: unknown;
+  let variant: unknown;
   try {
-    nickname = (JSON.parse(await readBody(req)) as { nickname?: unknown }).nickname;
+    ({ nickname, variant } = JSON.parse(await readBody(req)) as { nickname?: unknown; variant?: unknown });
   } catch {
     return json(res, 400, { error: 'Bad request' });
   }
   if (typeof nickname !== 'string' || nickname.trim().length < 1 || nickname.trim().length > 20) {
     return json(res, 400, { error: 'Nickname must be 1–20 characters.' });
   }
-  json(res, 200, rooms.create(nickname));
+  if (variant !== undefined && variant !== 'classic' && variant !== 'three') {
+    return json(res, 400, { error: "Variant must be 'classic' or 'three'." });
+  }
+  json(res, 200, rooms.create(nickname, variant ?? 'classic'));
 }
 
 async function serveStatic(staticDir: string, pathname: string, res: ServerResponse): Promise<void> {
