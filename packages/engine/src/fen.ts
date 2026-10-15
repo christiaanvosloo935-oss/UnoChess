@@ -1,3 +1,4 @@
+import { geometryFor, type Variant } from './geometry.js';
 import type { Army, ChessState, Piece, PieceType } from './types.js';
 
 export const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
@@ -68,4 +69,25 @@ export function toFen(chess: ChessState, toMove: Army): string {
     ? String.fromCharCode(97 + (chess.ep.square % 8)) + (Math.floor(chess.ep.square / 8) + 1)
     : '-';
   return `${rows.join('/')} ${toMove} ${castle} ${ep} 0 1`;
+}
+
+/** The full starting position of a variant, with every castling right granted. */
+export function startChess(variant: Variant): ChessState {
+  const geo = geometryFor(variant);
+  const board: (Piece | null)[] = new Array(geo.size).fill(null);
+  const counters: Record<string, number> = {};
+  for (const { sq, army, type } of geo.startPieces()) {
+    const key = army + type;
+    const n = counters[key] ?? 0;
+    counters[key] = n + 1;
+    board[sq] = { id: `${key}${n}`, type, army };
+  }
+  const full = { k: true, q: true };
+  const none = { k: false, q: false };
+  const castling = {
+    w: geo.armies.includes('w') ? { ...full } : { ...none },
+    r: geo.armies.includes('r') ? { ...full } : { ...none },
+    b: geo.armies.includes('b') ? { ...full } : { ...none },
+  };
+  return { variant, board, castling, ep: null };
 }

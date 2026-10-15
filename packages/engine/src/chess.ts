@@ -8,7 +8,6 @@ export interface MoveContext {
   turn?: number; // en passant needs ep.setOnTurn === turn - 1; omitted: ep usable
 }
 
-const other = (a: Army): Army => (a === 'w' ? 'b' : 'w');
 
 export function findKing(chess: ChessState, army: Army): Square {
   return chess.board.findIndex((p) => p?.type === 'k' && p.army === army);
@@ -190,7 +189,7 @@ export function applyChessMove(
     ep = {
       square: geo.pawnPush(army, move.from)!,
       victim: move.to,
-      capturer: nextMover ?? other(army),
+      capturer: nextMover ?? geo.armies[(geo.armies.indexOf(army) + 1) % geo.armies.length],
       setOnTurn: turn,
     };
   }
