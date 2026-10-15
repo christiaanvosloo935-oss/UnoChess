@@ -60,7 +60,8 @@ function GameRoute({ gameId, go }: { gameId: string; go: (path: string) => void 
       const link = `${location.origin}/g/${gameId}`;
       return (
         <main className="home">
-          <h1>Waiting for your friend…</h1>
+          <h1>Waiting for {conn.needed} more {conn.needed === 1 ? 'player' : 'players'}…</h1>
+          {conn.names.length > 0 && <p className="muted" data-testid="lobby-names">Joined: {conn.names.join(', ')}</p>}
           <p>Send them this link:</p>
           <input readOnly value={link} data-testid="copy-link" onFocus={(e) => e.target.select()} />
           <button onClick={() => navigator.clipboard?.writeText(link)}>Copy link</button>

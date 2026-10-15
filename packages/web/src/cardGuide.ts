@@ -6,6 +6,7 @@ export interface GuideEntry {
   sample: Card; // the card drawn next to the explanation
   label?: string; // overrides the symbol on the sample (e.g. "1–5")
   caption?: string;
+  threePlayerNote?: string; // extra line shown in three-player games
   matches: (card: Card) => boolean;
 }
 
@@ -55,6 +56,7 @@ export const GUIDE: GuideEntry[] = [
     title: '9 · Trade Hands',
     text: "Swap your whole hand with your opponent's.",
     sample: sample('num', 'blue', 9),
+    threePlayerNote: 'In a three-player game, you choose which opponent.',
     matches: num(9),
   },
   {
@@ -67,12 +69,14 @@ export const GUIDE: GuideEntry[] = [
     title: 'Switch sides',
     text: 'You and your opponent swap seats and now control the other army. Each of you keeps your own hand.',
     sample: sample('reverse', 'yellow'),
+    threePlayerNote: 'In a three-player game, you choose which opponent.',
     matches: kind('reverse'),
   },
   {
     title: 'Draw two',
     text: 'Your opponent skips their next turn and draws 2 cards.',
     sample: sample('draw2', 'red'),
+    threePlayerNote: 'In a three-player game, you choose which opponent.',
     matches: kind('draw2'),
   },
   {
@@ -85,6 +89,7 @@ export const GUIDE: GuideEntry[] = [
     title: 'Draw four',
     text: 'Your opponent skips their next turn and draws 4 cards.',
     sample: sample('wild4', null),
+    threePlayerNote: 'In a three-player game, you choose which opponent.',
     matches: kind('wild4'),
   },
 ];

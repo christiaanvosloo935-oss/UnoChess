@@ -30,6 +30,19 @@ describe('card guide', () => {
   });
 });
 
+describe('three-player notes', () => {
+  it('exist for exactly the four targeted cards', () => {
+    const deck = buildDeck();
+    const noted = GUIDE.filter((e) => e.threePlayerNote).map((e) => e.title);
+    expect(noted).toHaveLength(4);
+    for (const card of deck) {
+      const entry = GUIDE.find((e) => e.matches(card))!;
+      const targeted = (card.kind === 'num' && card.value === 9) || ['reverse', 'draw2', 'wild4'].includes(card.kind);
+      expect(!!entry.threePlayerNote, `${card.kind} ${card.value ?? ''}`).toBe(targeted);
+    }
+  });
+});
+
 describe('card symbols', () => {
   it('the Revive card is marked R, not W', () => {
     const wild = buildDeck().find((c) => c.kind === 'wild')!;

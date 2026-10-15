@@ -1,4 +1,4 @@
-import type { Action, Card, EffectArgs, PieceType, PlayerView, PromotionType, Square } from '@isachess/engine';
+import type { Action, Card, EffectArgs, PieceType, PlayerId, PlayerView, PromotionType, Square } from '@isachess/engine';
 
 export type Selection =
   | { kind: 'idle' }
@@ -18,6 +18,7 @@ export type UiEvent =
   | { type: 'clickCard'; cardId: string; asOne: boolean }
   | { type: 'clickSquare'; sq: Square }
   | { type: 'chooseType'; as: PieceType }
+  | { type: 'chooseTarget'; playerId: PlayerId }
   | { type: 'chooseCaptured'; index: number; asQueen: boolean }
   | { type: 'choosePromotion'; p: PromotionType }
   | { type: 'cancel' };
@@ -30,7 +31,7 @@ export interface StepResult {
 
 const IDLE: Selection = { kind: 'idle' };
 
-type Role = 'plain' | 'swap' | 'freeze' | 'shield' | 'shapeshift' | 'revive';
+type Role = 'plain' | 'swap' | 'freeze' | 'shield' | 'shapeshift' | 'revive' | 'targeted';
 type Chosen = Extract<Selection, { kind: 'cardChosen' }>;
 
 export function roleOf(card: Card): Role {
@@ -40,7 +41,9 @@ export function roleOf(card: Card): Role {
     if (card.value === 6) return 'swap';
     if (card.value === 7) return 'freeze';
     if (card.value === 8) return 'shapeshift';
+    if (card.value === 9) return 'targeted';
   }
+  if (card.kind === 'reverse' || card.kind === 'draw2' || card.kind === 'wild4') return 'targeted';
   return 'plain';
 }
 
@@ -62,9 +65,13 @@ function clickCard(view: PlayerView, sel: Selection, cardId: string, asOne: bool
   if (asOne ? !option.asOne : !option.asEffect) return { sel };
   if (asOne) return { sel: IDLE, send: playCard(cardId, { asOne: true }) };
   const o = view.options;
+  if (roleOf(card) === 'targeted') {
+    // One opponent left: the engine fills the target in. Two or more: ask which.
+    return o.targets.length >= 2 ? { sel: { kind: 'cardChosen', cardId, asOne: false, picks: [] } } : { sel: IDLE, send: playCard(cardId) };
+  }
   const needsTarget =
     { plain: false, swap: o.swaps.length > 0, freeze: o.freezeTargets.length > 0, shield: o.shieldTargets.length > 0,
-      shapeshift: o.shapeshifts.length > 0, revive: o.revives.length > 0 }[roleOf(card)];
+      shapeshift: o.shapeshifts.length > 0, revive: o.revives.length > 0, targeted: false }[roleOf(card)];
   if (!needsTarget) return { sel: IDLE, send: playCard(cardId) };
   return { sel: { kind: 'cardChosen', cardId, asOne: false, picks: [] } };
 }
@@ -137,6 +144,11 @@ export function step(view: PlayerView, sel: Selection, ev: UiEvent): StepResult 
     case 'chooseType':
       if (sel.kind === 'cardChosen' && sel.picks[0] && view.options.shapeshifts.some((s) => s.pieceId === sel.picks[0] && s.as === ev.as)) {
         return { sel: { ...sel, as: ev.as } };
+      }
+      return { sel };
+    case 'chooseTarget':
+      if (sel.kind === 'cardChosen' && chosenRole(view, sel) === 'targeted' && view.options.targets.includes(ev.playerId)) {
+        return { sel: IDLE, send: { type: 'playCard', cardId: sel.cardId, target: ev.playerId } };
       }
       return { sel };
     case 'chooseCaptured':
@@ -218,6 +230,7 @@ export function prompt(view: PlayerView, sel: Selection): string | null {
       return sel.as ? 'Shapeshift: pick a destination' : 'Shapeshift: choose the piece type to move like';
     case 'revive':
       return sel.capturedIndex === undefined ? 'Revive: choose a captured piece' : 'Revive: pick an empty square in your first two rows';
+    case 'targeted': return 'Choose which opponent';
     default: return null;
   }
 }
