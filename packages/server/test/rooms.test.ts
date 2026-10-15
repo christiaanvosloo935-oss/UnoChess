@@ -114,10 +114,10 @@ describe('Rooms', () => {
     if (!b.ok) throw new Error('join failed');
     rooms.attach(a.gameId, a.playerId);
     const snap = rooms.snapshot(a.gameId, a.playerId);
-    expect(snap).toMatchObject({ type: 'state', room: { opponentConnected: false } });
+    expect(snap).toMatchObject({ type: 'state', room: { connected: { [b.playerId]: false } } });
     rooms.attach(a.gameId, b.playerId);
-    expect(rooms.snapshot(a.gameId, a.playerId)).toMatchObject({ room: { opponentConnected: true } });
+    expect(rooms.snapshot(a.gameId, a.playerId)).toMatchObject({ room: { connected: { [b.playerId]: true } } });
     rooms.detach(a.gameId, b.playerId);
-    expect(rooms.snapshot(a.gameId, a.playerId)).toMatchObject({ room: { opponentConnected: false } });
+    expect(rooms.snapshot(a.gameId, a.playerId)).toMatchObject({ room: { connected: { [b.playerId]: false } } });
   });
 });

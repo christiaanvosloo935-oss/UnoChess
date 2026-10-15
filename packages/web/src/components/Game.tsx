@@ -37,7 +37,7 @@ function statusText(view: PlayerView, room: RoomInfo, sel: Selection): string {
     const total = phase.moved.length + phase.movesLeft;
     return `Card ${total}: move ${phase.moved.length + 1} of ${total}${phase.mustMove ? ' (get out of check)' : ''}`;
   }
-  if (view.inCheck === view.yourArmy) return 'You are in check! Play a card that escapes it, or any card as a 1.';
+  if (view.inCheck.includes(view.yourArmy)) return 'You are in check! Play a card that escapes it, or any card as a 1.';
   return 'Your turn: play a card';
 }
 
@@ -78,11 +78,11 @@ export function Game({ view, room, send, rematch, chat, me, sendChat, lastError,
     <div className="game">
       <div className="main">
         <div className="seat opponent">
-          <strong>{name(view.opponent)}</strong>
-          <CardBack count={view.opponentHandCount} />
-          {!room.opponentConnected && <span className="offline">Opponent disconnected, waiting…</span>}
+          <strong>{name(view.opponents[0].id)}</strong>
+          <CardBack count={view.opponents[0].handCount} />
+          {!room.connected[view.opponents[0].id] && <span className="offline">Opponent disconnected, waiting…</span>}
         </div>
-        <p className={`status${view.inCheck === view.yourArmy ? ' alert' : ''}`} data-testid="status">
+        <p className={`status${view.inCheck.includes(view.yourArmy) ? ' alert' : ''}`} data-testid="status">
           {statusText(view, room, sel)}
         </p>
         <Board view={view} selectable={selectable} targets={targets} selected={selectedSquares} onSquare={(s) => dispatch({ type: 'clickSquare', sq: s })} />

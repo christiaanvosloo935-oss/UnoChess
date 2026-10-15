@@ -10,9 +10,9 @@ export function GameOver({ view, room, onRematch }: { view: PlayerView; room: Ro
       <div className="modal" role="dialog" aria-label="Game over">
         <h2 data-testid="result">{title}</h2>
         <p>{why}</p>
-        {room.rematch.opponent && !room.rematch.you && <p>Your opponent wants a rematch.</p>}
-        <button type="button" onClick={onRematch} disabled={room.rematch.you} data-testid="rematch">
-          {room.rematch.you ? 'Waiting for opponent…' : 'Rematch'}
+        {room.rematch[view.opponents[0].id] && !room.rematch[view.you] && <p>Your opponent wants a rematch.</p>}
+        <button type="button" onClick={onRematch} disabled={room.rematch[view.you]} data-testid="rematch">
+          {room.rematch[view.you] ? 'Waiting for opponent…' : 'Rematch'}
         </button>
       </div>
     </div>

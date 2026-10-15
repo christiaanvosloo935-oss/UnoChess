@@ -41,14 +41,6 @@ export function nextPlayer(state: GameState, player: PlayerId): PlayerId {
   return player;
 }
 
-/**
- * Transitional two-player helper: the first active opponent, which is only meaningful with two
- * players. Still used by view.ts until the player view is made N-player; the engine rules do not use it.
- */
-export function opponentOf(state: GameState, player: PlayerId): PlayerId {
-  return opponentsOf(state, player)[0] ?? player;
-}
-
 export function inCheckNow(state: GameState): boolean {
   return isInCheck(state.chess, armyOf(state, state.current));
 }

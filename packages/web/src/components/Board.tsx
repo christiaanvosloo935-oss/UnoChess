@@ -31,7 +31,7 @@ export function Board({ view, selectable, targets, selected, onSquare }: Props) 
   const frozen = new Set(effects.frozen.map((f) => f.pieceId));
   const shielded = new Set(effects.shields.map((s) => s.pieceId));
   const moved = new Set(phase.kind === 'moving' ? phase.moved : []);
-  const kingInCheck: Square = view.inCheck ? chess.board.findIndex((p) => p?.type === 'k' && p.army === (view.inCheck as Army)) : -1;
+  const kingInCheck: Square = view.inCheck.length > 0 ? chess.board.findIndex((p) => p?.type === 'k' && p.army === view.inCheck[0]) : -1;
   const selectableSet = new Set(selectable);
   const targetSet = new Set(targets);
   const selectedSet = new Set(selected);

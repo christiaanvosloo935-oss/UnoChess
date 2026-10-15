@@ -1,6 +1,6 @@
 import { geometryFor } from './geometry.js';
 import { isInCheck, movesAs, revokeCastling } from './chess.js';
-import { armyOf, ctxFor as ctxForArmy, inCheckNow, isDeadArmy, liveEnemiesOf, opponentOf } from './state.js';
+import { armyOf, ctxFor as ctxForArmy, inCheckNow, isDeadArmy, liveEnemiesOf } from './state.js';
 import type { Army, Card, ChessState, GameState, PieceType, PlayerId, PromotionType, Square } from './types.js';
 
 export interface PlayableCard {
@@ -52,7 +52,7 @@ export function legalShieldTargets(state: GameState, player: PlayerId): string[]
   return state.chess.board.filter((p) => p && p.army === army && p.type !== 'k').map((p) => p!.id);
 }
 
-export { squareOfPiece, opponentOf };
+export { squareOfPiece };
 
 export interface ShapeshiftOption {
   pieceId: string;

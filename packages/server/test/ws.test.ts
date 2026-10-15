@@ -263,12 +263,13 @@ describe('websocket game', () => {
   it('shows the opponent as disconnected and connected again', async () => {
     const server = await boot();
     const { a, b } = await startGame(server.port);
-    const joined = await a.waitFor<Extract<ServerMessage, { type: 'state' }>>((m) => m.type === 'state' && m.room.opponentConnected);
-    expect(joined.room.opponentConnected).toBe(true);
+    const oppId = (await a.view()).opponents[0].id;
+    const joined = await a.waitFor<Extract<ServerMessage, { type: 'state' }>>((m) => m.type === 'state' && m.room.connected[oppId]);
+    expect(joined.room.connected[oppId]).toBe(true);
     const before = a.messages.length;
     b.ws.close();
-    const gone = await a.waitFor<Extract<ServerMessage, { type: 'state' }>>((m) => m.type === 'state' && !m.room.opponentConnected, before);
-    expect(gone.room.opponentConnected).toBe(false);
+    const gone = await a.waitFor<Extract<ServerMessage, { type: 'state' }>>((m) => m.type === 'state' && !m.room.connected[oppId], before);
+    expect(gone.room.connected[oppId]).toBe(false);
   });
 });
 

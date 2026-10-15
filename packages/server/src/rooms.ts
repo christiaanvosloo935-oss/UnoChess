@@ -180,12 +180,11 @@ export class Rooms {
   snapshot(gameId: string, playerId: PlayerId): ServerMessage | null {
     const room = this.rooms.get(gameId);
     if (!room) return null;
-    if (!room.state) return { type: 'lobby', gameId, names: room.seats.map((s) => s.nickname) };
-    const opponent = room.state.players.find((p) => p !== playerId)!;
+    if (!room.state) return { type: 'lobby', gameId, names: room.seats.map((s) => s.nickname), needed: 2 - room.seats.length };
     const info: RoomInfo = {
       names: Object.fromEntries(room.seats.map((s) => [s.playerId, s.nickname])),
-      opponentConnected: (room.connections[opponent] ?? 0) > 0,
-      rematch: { you: room.rematchVotes.has(playerId), opponent: room.rematchVotes.has(opponent) },
+      connected: Object.fromEntries(room.state.players.map((p) => [p, (room.connections[p] ?? 0) > 0])),
+      rematch: Object.fromEntries(room.state.players.map((p) => [p, room.rematchVotes.has(p)])),
     };
     return { type: 'state', view: viewFor(room.state, playerId), room: info };
   }
