@@ -83,7 +83,7 @@ describe('6 · Swap and frozen pieces', () => {
     const king = idAt(base, 'e8');
     const rook = idAt(base, 'h7');
     expect(pairHas(legalSwaps(base, 'B'), pawn, king)).toBe(true);
-    const frozen: GameState = { ...base, effects: { frozen: [{ pieceId: pawn, army: 'b' }], shields: [], pendingSkip: null } };
+    const frozen: GameState = { ...base, effects: { frozen: [{ pieceId: pawn, army: 'b' }], shields: [], pendingSkips: [] } };
     const pairs = legalSwaps(frozen, 'B');
     expect(pairs.some(([a, b]) => a === pawn || b === pawn)).toBe(false);
     expect(pairHas(pairs, king, rook)).toBe(true);
@@ -117,7 +117,7 @@ describe('7 · Freeze', () => {
     const base = stateFrom('4k3/8/8/3q4/8/8/8/4K3 w - - 0 1', { w: [zero1, zero2], b: [b1] });
     let s: GameState = {
       ...base,
-      effects: { frozen: [{ pieceId: idAt(base, 'd5'), army: 'b' }], shields: [], pendingSkip: 'B' },
+      effects: { frozen: [{ pieceId: idAt(base, 'd5'), army: 'b' }], shields: [], pendingSkips: ['B'] },
     };
     s = ok(s, 'A', play(zero1));
     expect(s.current).toBe('A');
@@ -234,7 +234,7 @@ describe('Draw Two / Wild Draw Four', () => {
     expect(after.hands.B).toHaveLength(3);
     expect(after.current).toBe('A');
     expect(after.turn).toBe(3);
-    expect(after.effects.pendingSkip).toBeNull();
+    expect(after.effects.pendingSkips).toEqual([]);
   });
 
   it('wild4: opponent gets +4 and is skipped', () => {

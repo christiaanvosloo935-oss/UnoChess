@@ -21,7 +21,7 @@ const play = (c: { id: string }, extra: Partial<Extract<Action, { type: 'playCar
 
 describe('createGame', () => {
   it('deals 7 each, leaves 94, white to move, players[0] is white', () => {
-    const g = createGame(42, 'A', 'B');
+    const g = createGame(42, ['A', 'B']);
     expect(g.hands.A).toHaveLength(7);
     expect(g.hands.B).toHaveLength(7);
     expect(g.drawPile).toHaveLength(94);
@@ -31,7 +31,7 @@ describe('createGame', () => {
     expect(g.phase).toEqual({ kind: 'awaitingCard' });
   });
   it('is deterministic for a seed', () => {
-    expect(createGame(5, 'A', 'B')).toEqual(createGame(5, 'A', 'B'));
+    expect(createGame(5, ['A', 'B'])).toEqual(createGame(5, ['A', 'B']));
   });
 });
 
@@ -143,7 +143,7 @@ describe('game end', () => {
     const rook = free.chess.board[sq('a7')]!.id;
     const after = ok(ok(free, 'B', play(c)), 'B', mv('a2', 'a1'));
     expect(after.phase).toEqual({ kind: 'awaitingCard' });
-    const frozen = stateFrom(FEN, { b: [c] }, { effects: { frozen: [{ pieceId: rook, army: 'w' }], shields: [], pendingSkip: null } });
+    const frozen = stateFrom(FEN, { b: [c] }, { effects: { frozen: [{ pieceId: rook, army: 'w' }], shields: [], pendingSkips: [] } });
     const mated = ok(ok(frozen, 'B', play(c)), 'B', mv('a2', 'a1'));
     expect(mated.phase).toEqual({ kind: 'over', winner: 'B', reason: 'checkmate' });
   });
@@ -160,7 +160,7 @@ describe('game end', () => {
     const z = num(0);
     const base = stateFrom('7k/8/8/8/8/p7/P7/K7 b - - 0 1', { b: [z] });
     const king = base.chess.board[sq('a1')]!.id;
-    const s = stateFrom('7k/8/8/8/8/p7/P7/K7 b - - 0 1', { b: [z] }, { effects: { frozen: [{ pieceId: king, army: 'w' }], shields: [], pendingSkip: null } });
+    const s = stateFrom('7k/8/8/8/8/p7/P7/K7 b - - 0 1', { b: [z] }, { effects: { frozen: [{ pieceId: king, army: 'w' }], shields: [], pendingSkips: [] } });
     expect(ok(s, 'B', play(z)).phase).toEqual({ kind: 'awaitingCard' });
   });
 

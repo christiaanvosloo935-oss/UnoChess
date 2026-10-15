@@ -103,7 +103,7 @@ export class Rooms {
     if (room.seats.length >= 2) return { ok: false, reason: 'full' };
     const seat = this.newSeat(nickname);
     room.seats.push(seat);
-    room.state = createGame(this.seed(), room.seats[0].playerId, seat.playerId);
+    room.state = createGame(this.seed(), [room.seats[0].playerId, seat.playerId]);
     this.emit(gameId);
     return { ok: true, playerId: seat.playerId, seatToken: seat.token };
   }
@@ -145,7 +145,7 @@ export class Rooms {
     room.rematchVotes.add(playerId);
     if (room.rematchVotes.size === 2) {
       const [first, second] = room.state.players;
-      room.state = createGame(this.seed(), second, first);
+      room.state = createGame(this.seed(), [second, first]);
       room.rematchVotes.clear();
     }
     this.emit(gameId);

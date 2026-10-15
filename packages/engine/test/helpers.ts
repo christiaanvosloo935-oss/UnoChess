@@ -30,7 +30,9 @@ export function stateFrom(
     chess,
     captured: { w: [], r: [], b: [] },
     players: ['A', 'B'],
+    variant: 'classic',
     seats: { w: 'A', b: 'B' },
+    eliminated: [],
     hands: { A: hands.w ?? [num(0)], B: hands.b ?? [num(0)] },
     drawPile: Array.from({ length: 20 }, (_, i) => filler(`d${i}`)),
     discardPile: [],
@@ -38,7 +40,7 @@ export function stateFrom(
     current: toMove === 'w' ? 'A' : 'B',
     turn: 1,
     phase: { kind: 'awaitingCard' },
-    effects: { frozen: [], shields: [], pendingSkip: null },
+    effects: { frozen: [], shields: [], pendingSkips: [] },
     nextPieceId: 0,
     log: [],
   };
@@ -73,5 +75,33 @@ export function hexChess(
     board,
     castling: { w: rights.w ?? off(), r: rights.r ?? off(), b: rights.b ?? off() },
     ep: null,
+  };
+}
+
+/** A three-player GameState: players A, B, C seated w, r, b. Hands default to a single 0 card each. */
+export function hexState(opts: {
+  pieces: [Army, PieceType, string][];
+  hands?: Record<string, Card[]>;
+  current?: string;
+  captured?: Partial<Record<Army, PieceType[]>>;
+}): GameState {
+  const filler = (id: string): Card => ({ id, kind: 'num', colour: 'red', value: 0 });
+  return {
+    chess: hexChess(opts.pieces),
+    captured: { w: [], r: [], b: [], ...opts.captured },
+    variant: 'three',
+    players: ['A', 'B', 'C'],
+    seats: { w: 'A', r: 'B', b: 'C' },
+    eliminated: [],
+    hands: { A: [num(0)], B: [num(0)], C: [num(0)], ...opts.hands },
+    drawPile: Array.from({ length: 30 }, (_, i) => filler(`d${i}`)),
+    discardPile: [],
+    seed: 1,
+    current: opts.current ?? 'A',
+    turn: 1,
+    phase: { kind: 'awaitingCard' },
+    effects: { frozen: [], shields: [], pendingSkips: [] },
+    nextPieceId: 0,
+    log: [],
   };
 }

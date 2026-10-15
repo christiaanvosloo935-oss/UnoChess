@@ -20,7 +20,7 @@ afterEach(async () => {
 /** A seed whose white opening hand holds a 2–5 move card. */
 function findSeed(): number {
   for (let seed = 1; seed < 1000; seed++) {
-    const g = createGame(seed, 'w', 'b');
+    const g = createGame(seed, ['w', 'b']);
     if (g.hands.w.some((c) => c.kind === 'num' && c.value! >= 2 && c.value! <= 5)) return seed;
   }
   throw new Error('no seed');

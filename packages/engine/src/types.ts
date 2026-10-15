@@ -54,7 +54,7 @@ export type Phase =
 export interface Effects {
   frozen: { pieceId: string; army: Army }[];
   shields: { pieceId: string; owner: PlayerId }[];
-  pendingSkip: PlayerId | null;
+  pendingSkips: PlayerId[];
 }
 
 export interface GameEvent {
@@ -64,10 +64,12 @@ export interface GameEvent {
 }
 
 export interface GameState {
+  variant: Variant;
   chess: ChessState;
   captured: Record<Army, PieceType[]>; // pieces OF that army that were captured
-  players: [PlayerId, PlayerId]; // [initial white, initial black]
-  seats: { w: PlayerId; b: PlayerId };
+  players: PlayerId[]; // clockwise; the first moves first
+  seats: Partial<Record<Army, PlayerId>>;
+  eliminated: PlayerId[];
   hands: Record<PlayerId, Card[]>;
   drawPile: Card[];
   discardPile: Card[];
@@ -88,7 +90,7 @@ export type EffectArgs =
   | { type: 'revive'; capturedIndex: number; square: Square; asQueen?: boolean };
 
 export type Action =
-  | { type: 'playCard'; cardId: string; asOne?: boolean; args?: EffectArgs }
+  | { type: 'playCard'; cardId: string; asOne?: boolean; args?: EffectArgs; target?: PlayerId }
   | { type: 'move'; from: Square; to: Square; promotion?: PromotionType }
   | { type: 'doneMoving' }
   | { type: 'resign' };

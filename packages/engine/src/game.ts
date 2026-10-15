@@ -1,30 +1,39 @@
 import { applyChessMove, isInCheck, legalMoves, movesAs } from './chess.js';
 import { legalFreezeTargets, legalRevives, legalShapeshifts, legalShieldTargets, legalSwaps, playableCards, squareOfPiece, swapSquares } from './cards.js';
 import { buildDeck, drawCards } from './deck.js';
-import { fromFen, START_FEN } from './fen.js';
+import { startChess } from './fen.js';
+import { enemiesOf, geometryFor, type Variant } from './geometry.js';
 import { shuffle } from './rng.js';
-import { armyOf, ctxFor, inCheckNow, opponentOf } from './state.js';
+import { activePlayers, armyOf, ctxFor, inCheckNow, nextPlayer, opponentOf, opponentsOf } from './state.js';
 import type { Action, ApplyResult, Army, Card, EffectArgs, GameState, Move, PlayerId } from './types.js';
 
-export { armyOf, inCheckNow, opponentOf };
+export { activePlayers, armyOf, inCheckNow, nextPlayer, opponentOf, opponentsOf };
 
 const HAND_SIZE = 7;
 
-export function createGame(seed: number, white: PlayerId, black: PlayerId): GameState {
+/** `players` are listed clockwise and seated on the variant's armies in order; the first moves first. */
+export function createGame(seed: number, players: PlayerId[], variant: Variant = 'classic'): GameState {
   const [deck, nextSeed] = shuffle(buildDeck(), seed);
+  const armies = geometryFor(variant).armies;
+  const seats: GameState['seats'] = {};
+  armies.forEach((army, i) => { seats[army] = players[i]; });
+  const hands: GameState['hands'] = {};
+  players.forEach((p, i) => { hands[p] = deck.slice(i * HAND_SIZE, (i + 1) * HAND_SIZE); });
   return {
-    chess: fromFen(START_FEN).chess,
+    variant,
+    chess: startChess(variant),
     captured: { w: [], r: [], b: [] },
-    players: [white, black],
-    seats: { w: white, b: black },
-    hands: { [white]: deck.slice(0, HAND_SIZE), [black]: deck.slice(HAND_SIZE, HAND_SIZE * 2) },
-    drawPile: deck.slice(HAND_SIZE * 2),
+    players: [...players],
+    seats,
+    eliminated: [],
+    hands,
+    drawPile: deck.slice(HAND_SIZE * players.length),
     discardPile: [],
     seed: nextSeed,
-    current: white,
+    current: players[0],
     turn: 1,
     phase: { kind: 'awaitingCard' },
-    effects: { frozen: [], shields: [], pendingSkip: null },
+    effects: { frozen: [], shields: [], pendingSkips: [] },
     nextPieceId: 0,
     log: [],
   };
@@ -83,6 +92,12 @@ function playCard(s: GameState, player: PlayerId, action: Extract<Action, { type
     return 'You are in check: play a card that escapes it, or play any card as a 1.';
   }
   const playedArmy = armyOf(s, player);
+  let target = player;
+  if (!asOne && TARGETED.includes(card.kind === 'num' ? `n${card.value}` : card.kind)) {
+    const resolved = resolveTarget(s, player, action.target);
+    if (typeof resolved !== 'string') return resolved.error;
+    target = resolved;
+  }
   hand.splice(idx, 1);
   s.discardPile.push(card);
   log(s, player, asOne ? `played ${cardLabel(card)} as a 1` : `played ${cardLabel(card)}`);
@@ -96,12 +111,12 @@ function playCard(s: GameState, player: PlayerId, action: Extract<Action, { type
       if (card.value === 6) return swapEffect(s, player, playedArmy, args);
       if (card.value === 7) return freezeEffect(s, player, playedArmy, args);
       if (card.value === 8) return shapeshiftEffect(s, player, playedArmy, args);
-      if (card.value === 9) return tradeEffect(s, player, playedArmy);
+      if (card.value === 9) return tradeEffect(s, player, playedArmy, target);
       return 'That card is not implemented yet.';
     case 'skip': return shieldEffect(s, player, playedArmy, args);
-    case 'reverse': return reverseEffect(s, player, playedArmy);
-    case 'draw2': return penaltyEffect(s, player, playedArmy, 2);
-    case 'wild4': return penaltyEffect(s, player, playedArmy, 4);
+    case 'reverse': return reverseEffect(s, player, playedArmy, target);
+    case 'draw2': return penaltyEffect(s, player, playedArmy, target, 2);
+    case 'wild4': return penaltyEffect(s, player, playedArmy, target, 4);
     case 'wild': return reviveEffect(s, player, playedArmy, args);
   }
 }
@@ -143,23 +158,35 @@ function shieldEffect(s: GameState, player: PlayerId, playedArmy: Army, args?: E
   endCard(s, player, playedArmy);
 }
 
-function tradeEffect(s: GameState, player: PlayerId, playedArmy: Army): void {
-  const other = opponentOf(s, player);
-  [s.hands[player], s.hands[other]] = [s.hands[other], s.hands[player]];
+/** Cards that name an opponent: 9, Reverse, +2 and +4. */
+const TARGETED = ['n9', 'reverse', 'draw2', 'wild4'];
+
+/** The chosen opponent, filled in automatically when only one is left. */
+function resolveTarget(s: GameState, player: PlayerId, target?: PlayerId): PlayerId | { error: string } {
+  const opponents = opponentsOf(s, player);
+  if (target === undefined) {
+    return opponents.length === 1 ? opponents[0] : { error: 'Choose which opponent.' };
+  }
+  return opponents.includes(target) ? target : { error: "You can't choose that player." };
+}
+
+function tradeEffect(s: GameState, player: PlayerId, playedArmy: Army, target: PlayerId): void {
+  [s.hands[player], s.hands[target]] = [s.hands[target], s.hands[player]];
   log(s, player, 'traded hands');
   endCard(s, player, playedArmy);
 }
 
-function reverseEffect(s: GameState, player: PlayerId, playedArmy: Army): void {
-  s.seats = { w: s.seats.b, b: s.seats.w };
+function reverseEffect(s: GameState, player: PlayerId, playedArmy: Army, target: PlayerId): void {
+  const mine = armyOf(s, player);
+  const theirs = armyOf(s, target);
+  s.seats = { ...s.seats, [mine]: target, [theirs]: player };
   log(s, player, 'switched sides');
   endCard(s, player, playedArmy);
 }
 
-function penaltyEffect(s: GameState, player: PlayerId, playedArmy: Army, count: number): void {
-  const other = opponentOf(s, player);
-  const drawn = drawFor(s, other, count);
-  s.effects.pendingSkip = other;
+function penaltyEffect(s: GameState, player: PlayerId, playedArmy: Army, target: PlayerId, count: number): void {
+  const drawn = drawFor(s, target, count);
+  if (!s.effects.pendingSkips.includes(target)) s.effects.pendingSkips.push(target);
   log(s, player, `made their opponent draw ${drawn}`);
   endCard(s, player, playedArmy);
 }
@@ -189,7 +216,7 @@ function makeMove(s: GameState, player: PlayerId, action: Extract<Action, { type
   if (!move) return candidates.some((m) => m.promotion) ? 'Choose a promotion piece' : "That move isn't legal.";
 
   const rookId = move.castle
-    ? s.chess.board[(action.from >> 3) * 8 + (move.castle === 'k' ? 7 : 0)]!.id
+    ? s.chess.board[geometryFor(s.variant).castling(army)![move.castle].rookFrom]!.id
     : null;
   commitMove(s, player, move);
   phase.moved.push(piece.id);
@@ -197,8 +224,7 @@ function makeMove(s: GameState, player: PlayerId, action: Extract<Action, { type
   phase.movesLeft -= 1;
   phase.mustMove = false;
 
-  const opponent: Army = army === 'w' ? 'b' : 'w';
-  if (isInCheck(s.chess, opponent)) {
+  if (givesCheck(s, army)) {
     log(s, player, 'Check!');
     return endCard(s, player, army);
   }
@@ -207,9 +233,15 @@ function makeMove(s: GameState, player: PlayerId, action: Extract<Action, { type
   }
 }
 
+/** True when any enemy of `army` is in check. */
+function givesCheck(s: GameState, army: Army): boolean {
+  return enemiesOf(s.variant, army).some((e) => isInCheck(s.chess, e));
+}
+
 /** Applies a chess move to the game state and records any capture. */
 function commitMove(s: GameState, player: PlayerId, move: Move): void {
-  const result = applyChessMove(s.chess, move, s.turn);
+  const nextMover = armyOf(s, nextPlayer(s, player));
+  const result = applyChessMove(s.chess, move, s.turn, nextMover);
   s.chess = result.chess;
   if (result.captured) {
     s.captured[result.captured.army].push(result.captured.type);
@@ -235,7 +267,7 @@ function shapeshiftEffect(s: GameState, player: PlayerId, playedArmy: Army, args
   if (!move) return "That piece can't move like that.";
   log(s, player, `shapeshifted a ${PIECE_NAMES[s.chess.board[from]!.type]} into a ${PIECE_NAMES[args.as]}`);
   commitMove(s, player, move);
-  if (isInCheck(s.chess, army === 'w' ? 'b' : 'w')) log(s, player, 'Check!');
+  if (givesCheck(s, army)) log(s, player, 'Check!');
   endCard(s, player, playedArmy);
 }
 
@@ -271,15 +303,16 @@ export function endCard(s: GameState, player: PlayerId, playedArmy: Army): void 
   s.effects.frozen = s.effects.frozen.filter((f) => f.army !== playedArmy);
   if (s.chess.ep && s.chess.ep.setOnTurn !== s.turn) s.chess.ep = null;
   s.turn += 1;
-  s.current = opponentOf(s, player);
+  s.current = nextPlayer(s, player);
   for (;;) {
     s.effects.shields = s.effects.shields.filter((sh) => sh.owner !== s.current);
-    if (s.effects.pendingSkip !== s.current) break;
-    s.effects.pendingSkip = null;
+    const skip = s.effects.pendingSkips.indexOf(s.current);
+    if (skip < 0) break;
+    s.effects.pendingSkips.splice(skip, 1);
     log(s, s.current, 'skips their turn');
     s.chess.ep = null;
     s.turn += 1;
-    s.current = opponentOf(s, s.current);
+    s.current = nextPlayer(s, s.current);
   }
   // Trade Hands can leave a player with nothing to play; they draw one so the game never stalls.
   if (s.hands[s.current].length === 0) drawFor(s, s.current, 1);
