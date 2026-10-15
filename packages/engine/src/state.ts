@@ -1,10 +1,23 @@
-import { geometryFor } from './geometry.js';
+import { enemiesOf, geometryFor } from './geometry.js';
 import { isInCheck, type MoveContext } from './chess.js';
 import type { Army, GameState, PlayerId } from './types.js';
 
 export function armyOf(state: GameState, player: PlayerId): Army {
   const armies = geometryFor(state.variant).armies;
-  return armies.find((a) => state.seats[a] === player) ?? armies[0];
+  const army = armies.find((a) => state.seats[a] === player);
+  if (!army) throw new Error(`Player ${player} has no army in this game.`);
+  return army;
+}
+
+/** True when the army's controller has been eliminated: its pieces stay on the board but never move. */
+export function isDeadArmy(state: GameState, army: Army): boolean {
+  const owner = state.seats[army];
+  return owner !== undefined && state.eliminated.includes(owner);
+}
+
+/** The armies that can attack `army`'s king and are still in play (an eliminated king's check no longer matters). */
+export function liveEnemiesOf(state: GameState, army: Army): Army[] {
+  return enemiesOf(state.variant, army).filter((e) => !isDeadArmy(state, e));
 }
 
 /** Players still in the game, clockwise from the first seat. */
@@ -28,7 +41,10 @@ export function nextPlayer(state: GameState, player: PlayerId): PlayerId {
   return player;
 }
 
-/** The first opponent; the only one in a two-player game. */
+/**
+ * Transitional two-player helper: the first active opponent, which is only meaningful with two
+ * players. Still used by view.ts until the player view is made N-player; the engine rules do not use it.
+ */
 export function opponentOf(state: GameState, player: PlayerId): PlayerId {
   return opponentsOf(state, player)[0] ?? player;
 }

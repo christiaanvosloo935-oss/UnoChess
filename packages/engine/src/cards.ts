@@ -1,6 +1,6 @@
-import { enemiesOf, geometryFor } from './geometry.js';
+import { geometryFor } from './geometry.js';
 import { isInCheck, movesAs, revokeCastling } from './chess.js';
-import { armyOf, ctxFor as ctxForArmy, inCheckNow, opponentOf } from './state.js';
+import { armyOf, ctxFor as ctxForArmy, inCheckNow, isDeadArmy, liveEnemiesOf, opponentOf } from './state.js';
 import type { Army, Card, ChessState, GameState, PieceType, PlayerId, PromotionType, Square } from './types.js';
 
 export interface PlayableCard {
@@ -24,7 +24,7 @@ function squareOfPiece(chess: ChessState, id: string): Square {
 export function legalSwaps(state: GameState, player: PlayerId): [string, string][] {
   const army = armyOf(state, player);
   const geo = geometryFor(state.chess.variant);
-  const enemies = enemiesOf(state.chess.variant, army);
+  const enemies = liveEnemiesOf(state, army);
   const frozen = new Set(state.effects.frozen.filter((f) => f.army === army).map((f) => f.pieceId));
   const own = state.chess.board
     .map((p, sq) => ({ p, sq }))
@@ -44,7 +44,7 @@ export function legalSwaps(state: GameState, player: PlayerId): [string, string]
 
 export function legalFreezeTargets(state: GameState, player: PlayerId): string[] {
   const army = armyOf(state, player);
-  return state.chess.board.filter((p) => p && p.army !== army).map((p) => p!.id);
+  return state.chess.board.filter((p) => p && p.army !== army && !isDeadArmy(state, p.army)).map((p) => p!.id);
 }
 
 export function legalShieldTargets(state: GameState, player: PlayerId): string[] {
@@ -89,7 +89,7 @@ export interface ReviveOption {
 /** Captured pieces that may return to an empty square in the first two rows without giving check. */
 export function legalRevives(state: GameState, player: PlayerId): ReviveOption[] {
   const army = armyOf(state, player);
-  const enemies = enemiesOf(state.chess.variant, army);
+  const enemies = liveEnemiesOf(state, army);
   const squares = geometryFor(state.chess.variant).reviveSquares(army);
   const out: ReviveOption[] = [];
   state.captured[army].forEach((type, capturedIndex) => {

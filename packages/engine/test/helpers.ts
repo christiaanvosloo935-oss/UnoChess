@@ -84,10 +84,11 @@ export function hexState(opts: {
   hands?: Record<string, Card[]>;
   current?: string;
   captured?: Partial<Record<Army, PieceType[]>>;
+  rights?: Partial<Castling>;
 }): GameState {
   const filler = (id: string): Card => ({ id, kind: 'num', colour: 'red', value: 0 });
   return {
-    chess: hexChess(opts.pieces),
+    chess: hexChess(opts.pieces, opts.rights),
     captured: { w: [], r: [], b: [], ...opts.captured },
     variant: 'three',
     players: ['A', 'B', 'C'],
