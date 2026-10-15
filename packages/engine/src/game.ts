@@ -4,7 +4,7 @@ import { buildDeck, drawCards } from './deck.js';
 import { startChess } from './fen.js';
 import { geometryFor, type Variant } from './geometry.js';
 import { shuffle } from './rng.js';
-import { activePlayers, armyOf, checkedEnemies, ctxFor, givesNewCheck, inCheckNow, nextPlayer, opponentsOf } from './state.js';
+import { activePlayers, armyOf, checkedEnemies, ctxFor, exhaustedPieces, givesNewCheck, inCheckNow, nextPlayer, opponentsOf } from './state.js';
 import type { Action, ApplyResult, Army, Card, EffectArgs, GameState, Move, PlayerId } from './types.js';
 
 export { activePlayers, armyOf, inCheckNow, nextPlayer, opponentsOf };
@@ -207,7 +207,7 @@ function makeMove(s: GameState, player: PlayerId, action: Extract<Action, { type
   const army = armyOf(s, player);
   const piece = s.chess.board[action.from];
   if (!piece || piece.army !== army) return 'Pick one of your own pieces.';
-  if (phase.moved.includes(piece.id)) return 'That piece has already moved this turn.';
+  if (exhaustedPieces(phase.moved).has(piece.id)) return 'That piece has already moved twice this turn.';
   const ctx = ctxFor(s, army, phase.moved);
   if (ctx.frozen!.has(piece.id)) return 'That piece is frozen.';
   const candidates = legalMoves(s.chess, army, ctx).filter((m) => m.from === action.from && m.to === action.to);
@@ -298,12 +298,22 @@ function doneMoving(s: GameState, player: PlayerId): string | void {
 
 /** Finishes the current card: draw step, expire effects, pass the turn, then start the next player's turn. */
 export function endCard(s: GameState, player: PlayerId, playedArmy: Army): void {
-  if (s.hands[player].length < HAND_SIZE) drawFor(s, player, 1);
+  topUpHands(s, player);
   s.effects.frozen = s.effects.frozen.filter((f) => f.army !== playedArmy);
   if (s.chess.ep && s.chess.ep.setOnTurn !== s.turn) s.chess.ep = null;
   s.turn += 1;
   s.current = nextPlayer(s, player);
   beginTurn(s);
+}
+
+/** Draw step: everyone still in the game is topped up to 7 cards (as far as the piles allow), the mover first, then clockwise. */
+function topUpHands(s: GameState, first: PlayerId): void {
+  const active = activePlayers(s);
+  const start = Math.max(active.indexOf(first), 0);
+  for (const p of [...active.slice(start), ...active.slice(0, start)]) {
+    const missing = HAND_SIZE - s.hands[p].length;
+    if (missing > 0) drawFor(s, p, missing);
+  }
 }
 
 /** Passes the turn past `s.current` (who may already be eliminated) without a card. */

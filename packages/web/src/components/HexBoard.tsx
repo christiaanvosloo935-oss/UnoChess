@@ -1,6 +1,6 @@
 import { useLayoutEffect, useMemo, useRef } from 'react';
 import type { Effects, PlayerView, Square } from '@isachess/engine';
-import { geometryFor } from '@isachess/engine';
+import { exhaustedPieces, geometryFor } from '@isachess/engine';
 import { diffBoards, newEffects, shouldAnimate, type BoardMeta } from '../animation';
 import { playTransition, prefersReducedMotion } from '../animatePieces';
 import { layoutHex } from '../hexLayout';
@@ -34,7 +34,7 @@ export function HexBoard({ view, selectable, targets, selected, onSquare }: Prop
 
   const frozen = new Set(effects.frozen.map((f) => f.pieceId));
   const shielded = new Set(effects.shields.map((s) => s.pieceId));
-  const moved = new Set(phase.kind === 'moving' ? phase.moved : []);
+  const moved = exhaustedPieces(phase.kind === 'moving' ? phase.moved : []); // greyed out once a piece used its two moves
   const checked = new Set<Square>();
   for (const army of view.inCheck) {
     const at = chess.board.findIndex((p) => p?.type === 'k' && p.army === army);

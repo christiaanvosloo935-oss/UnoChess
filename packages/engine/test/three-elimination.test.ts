@@ -121,7 +121,7 @@ describe('elimination', () => {
 
 describe('stalemate', () => {
   it('with three in skips the turn', () => {
-    const bHand = [num(3), num(4)];
+    const bHand = Array.from({ length: 7 }, () => num(3)); // a full hand: the skipped turn draws nothing
     const s = aPassesTo(REDSTALE, {}, bHand);
     expect(s.eliminated).toEqual([]);
     expect(s.current).toBe('C');

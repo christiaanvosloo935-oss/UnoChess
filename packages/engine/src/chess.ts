@@ -4,7 +4,7 @@ import type { Army, Castling, ChessState, Move, Piece, PieceType, Square } from 
 export interface MoveContext {
   frozen?: ReadonlySet<string>; // piece ids that may not move
   shielded?: ReadonlySet<string>; // piece ids that may not be captured
-  moved?: ReadonlySet<string>; // piece ids already moved this card (rule B)
+  moved?: ReadonlySet<string>; // piece ids that used up their moves this card (rule B: two moves each)
   turn?: number; // en passant needs ep.setOnTurn === turn - 1; omitted: ep usable
 }
 

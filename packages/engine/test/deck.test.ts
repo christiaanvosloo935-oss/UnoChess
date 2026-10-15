@@ -4,13 +4,14 @@ import { buildDeck, drawCards, type Card } from '../src/index.js';
 const num = (id: string, value = 0): Card => ({ id, kind: 'num', colour: 'red', value });
 
 describe('deck', () => {
-  it('has 108 cards with the standard breakdown', () => {
+  it('has 114 cards with the standard breakdown plus the extra 1-5 cards', () => {
     const deck = buildDeck();
-    expect(deck).toHaveLength(108);
-    expect(new Set(deck.map((c) => c.id)).size).toBe(108);
+    expect(deck).toHaveLength(114);
+    expect(new Set(deck.map((c) => c.id)).size).toBe(114);
     const nums = (v: number) => deck.filter((c) => c.kind === 'num' && c.value === v).length;
     expect(nums(0)).toBe(4);
-    for (let v = 1; v <= 9; v++) expect(nums(v)).toBe(8);
+    for (let v = 6; v <= 9; v++) expect(nums(v)).toBe(8);
+    expect([1, 2, 3, 4, 5].map(nums)).toEqual([9, 9, 10, 9, 9]);
     for (const kind of ['skip', 'reverse', 'draw2'] as const) {
       expect(deck.filter((c) => c.kind === kind)).toHaveLength(8);
     }
@@ -21,11 +22,11 @@ describe('deck', () => {
     }
   });
 
-  it('gives each colour one 0 and two of each other card', () => {
+  it('gives each colour one 0 and two of each other card, plus its share of the extra 1-5 cards', () => {
     const deck = buildDeck();
-    for (const colour of ['red', 'yellow', 'green', 'blue']) {
-      expect(deck.filter((c) => c.colour === colour)).toHaveLength(25);
-    }
+    const sizes = ['red', 'yellow', 'green', 'blue'].map((colour) => deck.filter((c) => c.colour === colour).length);
+    expect(sizes).toEqual([27, 27, 26, 26]);
+    expect(sizes.reduce((a, b) => a + b, 0) + deck.filter((c) => c.colour === null).length).toBe(114);
   });
 });
 

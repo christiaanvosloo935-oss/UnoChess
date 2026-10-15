@@ -20,11 +20,11 @@ const play = (c: { id: string }, extra: Partial<Extract<Action, { type: 'playCar
   ({ type: 'playCard', cardId: c.id, ...extra });
 
 describe('createGame', () => {
-  it('deals 7 each, leaves 94, white to move, players[0] is white', () => {
+  it('deals 7 each, leaves 100, white to move, players[0] is white', () => {
     const g = createGame(42, ['A', 'B']);
     expect(g.hands.A).toHaveLength(7);
     expect(g.hands.B).toHaveLength(7);
-    expect(g.drawPile).toHaveLength(94);
+    expect(g.drawPile).toHaveLength(100);
     expect(g.current).toBe('A');
     expect(g.players).toEqual(['A', 'B']);
     expect(g.seats).toEqual({ w: 'A', b: 'B' });
@@ -40,7 +40,7 @@ describe('0 card', () => {
     const zero = num(0);
     const s = stateFrom(START_FEN, { w: [zero, ...Array.from({ length: 5 }, () => num(3))] });
     const after = ok(s, 'A', play(zero));
-    expect(after.hands.A).toHaveLength(6);
+    expect(after.hands.A).toHaveLength(7);
     expect(after.current).toBe('B');
     expect(after.turn).toBe(2);
     expect(after.phase).toEqual({ kind: 'awaitingCard' });
@@ -62,12 +62,13 @@ describe('move cards', () => {
     expect(s.current).toBe('B');
   });
 
-  it('rule B: the same piece cannot move twice', () => {
-    const c = num(2);
+  it('rule B: a piece may move twice on one card, never a third time', () => {
+    const c = num(3);
     let s = stateFrom(START_FEN, { w: [c] });
     s = ok(s, 'A', play(c));
     s = ok(s, 'A', mv('e2', 'e3'));
-    expect(fail(s, 'A', mv('e3', 'e4'))).toMatch(/already moved/);
+    s = ok(s, 'A', mv('e3', 'e4'));
+    expect(fail(s, 'A', mv('e4', 'e5'))).toMatch(/already moved twice/);
   });
 
   it('rule A: giving check ends the turn with moves left', () => {
@@ -187,12 +188,13 @@ describe('special chess moves', () => {
     expect(passed.chess.ep).toBeNull();
   });
 
-  it('castling counts as the king move and marks the rook moved', () => {
+  it('castling uses one move of the king and one move of the rook', () => {
     const c = num(3);
     let s = stateFrom('4k3/8/8/8/8/8/P7/4K2R w K - 0 1', { w: [c] });
     s = ok(ok(s, 'A', play(c)), 'A', mv('e1', 'g1'));
     expect(s.chess.board[sq('f1')]).toMatchObject({ type: 'r' });
-    expect(fail(s, 'A', mv('f1', 'f2'))).toMatch(/already moved/);
+    s = ok(s, 'A', mv('f1', 'f2'));
+    expect(fail(s, 'A', mv('f2', 'f3'))).toMatch(/already moved twice/);
   });
 });
 
@@ -218,7 +220,7 @@ describe('stale and out-of-turn actions', () => {
 describe('draw step', () => {
   it('does not draw when the hand still has 7 or more cards', () => {
     const hand = Array.from({ length: 8 }, () => num(0));
-    const s = stateFrom(START_FEN, { w: hand });
+    const s = stateFrom(START_FEN, { w: hand, b: Array.from({ length: 7 }, () => num(0)) });
     const after = ok(s, 'A', play(hand[0]));
     expect(after.hands.A).toHaveLength(7);
     expect(after.drawPile).toHaveLength(20);
@@ -228,7 +230,7 @@ describe('draw step', () => {
 describe('elimination and the hand', () => {
   it('a two-player checkmate leaves the loser\'s hand and the discard pile alone', () => {
     const c = num(1);
-    const loser = [num(2), num(3)];
+    const loser = Array.from({ length: 7 }, () => num(2)); // a full hand, so the top-up leaves it alone
     let s = stateFrom('rnbqkbnr/pppp1ppp/8/4p3/6P1/5P2/PPPPP2P/RNBQKBNR b KQkq - 0 1', { b: [c], w: loser });
     s = ok(s, 'B', play(c));
     s = ok(s, 'B', mv('d8', 'h4'));

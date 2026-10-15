@@ -2,6 +2,7 @@ import { shuffle } from './rng.js';
 import type { Card, CardKind, Colour } from './types.js';
 
 const COLOURS: Colour[] = ['red', 'yellow', 'green', 'blue'];
+const EXTRA_MOVE_CARDS = [1, 2, 3, 3, 4, 5];
 
 export function buildDeck(): Card[] {
   const deck: Card[] = [];
@@ -25,6 +26,8 @@ export function buildDeck(): Card[] {
     add('wild', null);
     add('wild4', null);
   }
+  // 15% more move cards (1-5): 40 became 46. Colour never matters, so the extras rotate through the colours.
+  EXTRA_MOVE_CARDS.forEach((value, i) => add('num', COLOURS[i % COLOURS.length], value));
   return deck;
 }
 

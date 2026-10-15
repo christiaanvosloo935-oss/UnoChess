@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef } from 'react';
-import type { Army, Effects, PlayerView, Square } from '@isachess/engine';
+import { exhaustedPieces, type Army, type Effects, type PlayerView, type Square } from '@isachess/engine';
 import { diffBoards, newEffects, shouldAnimate, type BoardMeta } from '../animation';
 import { playTransition, prefersReducedMotion } from '../animatePieces';
 import { PieceIcon } from './PieceIcon';
@@ -30,7 +30,7 @@ export function Board({ view, selectable, targets, selected, onSquare }: Props) 
   const files = yourArmy === 'w' ? [0, 1, 2, 3, 4, 5, 6, 7] : [7, 6, 5, 4, 3, 2, 1, 0];
   const frozen = new Set(effects.frozen.map((f) => f.pieceId));
   const shielded = new Set(effects.shields.map((s) => s.pieceId));
-  const moved = new Set(phase.kind === 'moving' ? phase.moved : []);
+  const moved = exhaustedPieces(phase.kind === 'moving' ? phase.moved : []); // greyed out once a piece used its two moves
   const kingInCheck: Square = view.inCheck.length > 0 ? chess.board.findIndex((p) => p?.type === 'k' && p.army === view.inCheck[0]) : -1;
   const selectableSet = new Set(selectable);
   const targetSet = new Set(targets);

@@ -26,7 +26,7 @@ commonly published layout and should be checked against a real board during play
 
 ## 3. Rules for three players
 
-**Setup.** Three armies: White, Red, Black, seated clockwise. Same 108-card deck, 7 cards each.
+**Setup.** Three armies: White, Red, Black, seated clockwise. Same 114-card deck (see the 2-player spec), 7 cards each.
 White moves first; turns then go clockwise by *player*, skipping eliminated players.
 Each army starts in its own area in the normal chess starting position.
 

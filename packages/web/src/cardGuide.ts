@@ -28,7 +28,7 @@ export const GUIDE: GuideEntry[] = [
   },
   {
     title: '1–5 · Moves',
-    text: 'Make that many moves, one after another. Each piece can move only once, and the moment you give check your turn ends.',
+    text: 'Make that many moves, one after another. Each piece can move up to twice, and the moment you give check your turn ends.',
     sample: sample('num', 'blue', 3),
     label: '1–5',
     caption: 'Moves',
@@ -96,7 +96,7 @@ export const GUIDE: GuideEntry[] = [
 
 export const GOOD_TO_KNOW = [
   "Card colours don't matter: any card can be played at any time.",
-  'After you play a card, you draw one to fill your hand back up to 7.',
+  'After every card, everyone is topped up to 7 cards. Nobody ever holds fewer than 7, as long as the draw pile lasts.',
   "If you're in check, the card you play must get you out of it. Or play any card as a single move.",
   'You win by checkmate. Running out of cards never ends the game.',
 ];

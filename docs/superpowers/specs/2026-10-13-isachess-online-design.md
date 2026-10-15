@@ -62,7 +62,7 @@ packages/
    - a short event log
 4. **Playing a card.** Click a card, then follow the prompts for its effect:
    - Move cards (1–5): legal destination squares are highlighted, with a counter of
-     moves left. Pieces that have already moved this turn are greyed out.
+     moves left. Pieces that have used both of their moves this turn are greyed out.
      A **Done moving** button ends the turn early.
    - 6 Swap: pick two of your pieces.
    - 7 Freeze: pick an enemy piece.
@@ -81,8 +81,10 @@ packages/
 ## 4. Rules (from the rulebook)
 
 **Setup.** Standard chessboard and pieces in the normal starting position. A standard
-108-card deck: one 0 per colour, two each of 1–9 per colour, two Skip, two Reverse
-and two Draw Two per colour, four Wild and four Wild Draw Four. Each player draws 7.
+114-card deck: one 0 per colour, two each of 1–9 per colour, two Skip, two Reverse
+and two Draw Two per colour, four Wild and four Wild Draw Four, plus six extra move
+cards (one extra each of 1, 2, 4 and 5 and two extra 3s, so there are 46 cards numbered
+1–5 instead of 40). Each player draws 7.
 The rest is the draw pile. White goes first.
 
 **Turn.** PLAY one card (colour and number never matter) → ACT (carry out its effect) →
@@ -104,7 +106,7 @@ DRAW (see §5.7).
 
 **Multi-move rules (cards 1–5).**
 - A. Check ends your turn: the moment you give check, remaining moves are lost.
-- B. Each piece moves at most once per card.
+- B. Each piece moves at most twice per card.
 - C. If you start your turn in check, your first move must get out of check.
 
 **Winning.** Checkmate wins. Running out of cards never ends the game.
@@ -132,7 +134,7 @@ engine and every one gets a test.
    player B moves next, controlling A's old army. Reverse makes no chess move. Castling
    rights, captured pieces and effects belong to the *armies*, not the players.
 5. **Castling, en passant and promotion** follow normal chess. Castling counts as the
-   king's one move under rule B, and that rook may not move again on the same card.
+   king's one move and that rook's one move under rule B (each may still move once more on the same card).
 6. **Swap and Revive** may not give check, and may not leave your own king in check.
 7. **Shapeshift.** The piece moves as any other piece type for this one move, then is
    itself again.
@@ -147,8 +149,10 @@ engine and every one gets a test.
    onto the last rank doesn't promote.
 9. **Draw Two / Draw Four** with a hand over 7. The penalised player draws all the cards.
    On later turns they still play exactly one card per turn and **don't draw** while their
-   hand has 7 or more cards. Once it's below 7 after playing, they draw 1 as normal.
-   Precisely: at the end of the DRAW step, draw 1 if the hand has fewer than 7 cards.
+   hand has 7 or more cards. Once it's below 7 after playing, they are topped up to 7.
+   Precisely: at the end of every card, each player still in the game with fewer than 7 cards
+   draws until they hold 7 (as far as the draw pile and the reshuffled discard pile allow),
+   starting with the player who played, then clockwise. Nobody holds fewer than 7 cards otherwise.
 10. **Skipped turns.** After a Draw Two or Draw Four, the player who played it takes the
     next turn.
 11. **Freeze timing.** A freeze applies to the frozen army's next turn that is actually
@@ -160,7 +164,7 @@ engine and every one gets a test.
     stalemate: such a player can always play a card (e.g. a 0).
 14. **Multi-move stopping early.** A player may end a 1–5 card turn early with
     **Done moving** at any point, even before the first move. The exception is rule C: when
-    in check, the first (escaping) move is required. If no legal move remains for any unmoved piece, the turn ends
+    in check, the first (escaping) move is required. If no legal move remains for any piece that still has a move left, the turn ends
     automatically.
 15. **Resign.** Either player may resign at any time. The opponent wins.
 
@@ -253,7 +257,7 @@ engine and every one gets a test.
     - a boxed-in bishop leaping like a knight
     - a shielded queen on an open file
     - Revive's legal and illegal squares, including the square that would give check
-  - deck composition (108 cards) and the reshuffle when the draw pile is empty
+  - deck composition (114 cards) and the reshuffle when the draw pile is empty
 - **Server (Vitest):** two simulated clients play a scripted game over real WebSockets.
   Tests also check that neither ever receives the other's hand or the draw-pile order, and
   cover reconnecting with a seat token and rejecting a third visitor.
