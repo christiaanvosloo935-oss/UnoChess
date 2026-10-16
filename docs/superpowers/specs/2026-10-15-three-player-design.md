@@ -32,12 +32,13 @@ Each army starts in its own area in the normal chess starting position.
 
 **Unchanged.** Every card and every clarification of the 2-player spec §4–5.
 
-**"The opponent".** Trade Hands (9), Draw Two, Draw Four and Switch Sides name an opponent. In 3-player
-the player who plays the card **chooses which opponent** it affects. Freeze may target any opponent's piece.
+**"The opponent".** Trade Hands (9) and Switch Sides name an opponent. In 3-player
+the player who plays the card **chooses which opponent** it affects. Draw Two and Draw Four give the
+extra cards to the player who plays them, so they name nobody. Freeze may target any opponent's piece.
 Freeze and Shield timings count the turns of the army's controller.
 
-**Skipped turns.** Draw Two / Draw Four make the chosen opponent skip their next turn; play passes to the next
-non-eliminated player clockwise.
+**Skipped turns.** No card skips a turn: after Draw Two / Draw Four play simply passes to the next
+non-eliminated player clockwise. Only a stalemated player's turn is skipped (below).
 
 **Check.**
 - No move or effect may leave your own king in check, from either opponent.
@@ -89,10 +90,10 @@ from their own edge); the board is drawn with the viewer's army at the bottom.
   `eliminated` flag.
 - **Turn order.** `opponentOf` is replaced by `opponentsOf(state, player)` (opponents still in the game) and
   `nextPlayer` (clockwise, skipping eliminated players).
-- **Targeted cards.** Trade Hands, Draw Two, Draw Four and Switch Sides take a `target` player; in 2-player it is
+- **Targeted cards.** Trade Hands and Switch Sides take a `target` player; in 2-player it is
   filled in automatically, so existing clients and tests do not change.
 - **Check.** Tested against every other army, including an eliminated army's pieces.
-- **Turn start:** expire shields; handle any pending skip; if the player is checkmated, eliminate them and move on;
+- **Turn start:** expire shields; if the player is checkmated, eliminate them and move on;
   if stalemated with three players in, skip them. The game ends when one player is left, or on stalemate with two left.
 - **Views.** `PlayerView` gains `variant`, an `opponents` list (name, army, hand count, eliminated) and `inCheck` as
   a list of armies. The hidden-information rules are unchanged: a player sees only their own hand.

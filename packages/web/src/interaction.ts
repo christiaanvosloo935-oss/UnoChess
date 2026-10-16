@@ -43,7 +43,7 @@ export function roleOf(card: Card): Role {
     if (card.value === 8) return 'shapeshift';
     if (card.value === 9) return 'targeted';
   }
-  if (card.kind === 'reverse' || card.kind === 'draw2' || card.kind === 'wild4') return 'targeted';
+  if (card.kind === 'reverse') return 'targeted';
   return 'plain';
 }
 

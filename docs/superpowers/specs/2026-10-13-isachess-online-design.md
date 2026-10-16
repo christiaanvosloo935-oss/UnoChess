@@ -100,9 +100,9 @@ DRAW (see §5.7).
 | 9 · Trade Hands | Swap whole hands with your opponent. |
 | Shield | One of your pieces (not the king) can't be captured until the start of your next turn. No moves this turn. A shielded piece can still be frozen or swapped. |
 | Switch Sides | Players swap armies; each keeps their own hand. |
-| Draw Two | Opponent draws 2 and skips their next turn. |
+| Draw Two | You draw 2 extra cards. Your turn then ends; the next player moves as normal (nobody is skipped). |
 | Revive | Return one of your captured pieces to any empty square in your first two rows (pawns allowed on the first row). It may not give check. Only a captured pawn may return as a queen; everything else returns as itself. No effect if nothing has been captured. |
-| Draw Four | Opponent draws 4 and skips their next turn. |
+| Draw Four | You draw 4 extra cards. Your turn then ends; the next player moves as normal (nobody is skipped). |
 
 **Multi-move rules (cards 1–5).**
 - A. Check ends your turn: the moment you give check, remaining moves are lost.
@@ -147,18 +147,18 @@ engine and every one gets a test.
 8. **Promotion.** A real pawn that ends any move on the last rank always promotes,
    however it got there (normal move or Shapeshift). A non-pawn moving *as* a pawn
    onto the last rank doesn't promote.
-9. **Draw Two / Draw Four** with a hand over 7. The penalised player draws all the cards.
+9. **Draw Two / Draw Four** are drawn by the player who plays them, so their hand grows past 7.
    On later turns they still play exactly one card per turn and **don't draw** while their
    hand has 7 or more cards. Once it's below 7 after playing, they are topped up to 7.
    Precisely: at the end of every card, each player still in the game with fewer than 7 cards
    draws until they hold 7 (as far as the draw pile and the reshuffled discard pile allow),
    starting with the player who played, then clockwise. Nobody holds fewer than 7 cards otherwise.
-10. **Skipped turns.** After a Draw Two or Draw Four, the player who played it takes the
-    next turn.
+10. **No skipped turns.** After a Draw Two or Draw Four the turn simply passes to the next
+    player. (In the three-player game a stalemated player's turn is still skipped.)
 11. **Freeze timing.** A freeze applies to the frozen army's next turn that is actually
-    *played*. If that turn is skipped, the freeze carries to the following played turn.
-12. **Shield timing.** It ends at the start of the shielding player's next turn,
-    whether that is a played turn or a skipped one.
+    *played*. If that turn is skipped (a stalemate skip in the three-player game), the freeze
+    carries to the following played turn.
+12. **Shield timing.** It ends at the start of the shielding player's next turn.
 13. **Stalemate.** If the player to move isn't in check and their army has no legal
     ordinary chess move, the game is drawn. Holding only "useless" cards isn't a
     stalemate: such a player can always play a card (e.g. a 0).
@@ -182,8 +182,7 @@ engine and every one gets a test.
   - `resolving` (a card in progress: moves left, IDs of pieces already moved, whether
     it was played as a "1")
   - `over` (result and reason)
-- `effects`: frozen `{pieceId, army, remainingPlayedTurns}`, shields `{pieceId, expiresAtStartOfTurnOf}`,
-  and `pendingSkip` for a player.
+- `effects`: frozen `{pieceId, army, remainingPlayedTurns}` and shields `{pieceId, expiresAtStartOfTurnOf}`.
 - `rng`: a seeded generator so tests are reproducible.
 
 ### API
@@ -201,8 +200,8 @@ engine and every one gets a test.
 `revive {capturedIndex, square, asQueen?}` · `doneMoving` · `resign`
 
 ### Turn flow
-1. When a turn starts, expire shields and handle any skip. A skipped turn draws nothing:
-   the penalty cards were already drawn when the card was played.
+1. When a turn starts, expire shields. (A turn passed over without a card, such as a stalemate skip in
+   the three-player game, draws nothing.)
 2. `playCard` validates the card against §5.3 and either resolves immediately or enters
    `resolving`.
 3. After each move, the engine checks:
@@ -212,7 +211,7 @@ engine and every one gets a test.
 4. When the card ends:
    - discard it
    - run the DRAW step (§5.9)
-   - pass the turn to the next player, or back to the same player if a skip applies
+   - pass the turn to the next player
    - evaluate checkmate or stalemate for the player now to move (§5.2, §5.13)
 
 ## 7. Server design

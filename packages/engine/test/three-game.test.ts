@@ -111,27 +111,20 @@ describe('moving on the three-player board', () => {
 const seven = () => Array.from({ length: 7 }, () => num(0));
 
 describe('targeted cards', () => {
-  it('+2 needs a target with two opponents', () => {
-    const d2 = card('draw2');
-    let s = hexState({ pieces: K, hands: { A: [d2, num(0)], C: seven() } });
-    const bad = apply(s, 'A', play(d2));
-    expect(bad).toEqual({ ok: false, error: 'Choose which opponent.' });
-    s = ok(s, 'A', play(d2, { target: 'C' }));
-    expect(s.hands.C).toHaveLength(9);
-    expect(s.effects.pendingSkips).toEqual(['C']);
-    expect(s.current).toBe('B');
-    s = ok(s, 'B', play(s.hands.B[0]));
-    expect(s.current).toBe('A');
-    expect(s.effects.pendingSkips).toEqual([]);
+  it('Trade Hands needs a target with two opponents', () => {
+    const nine = num(9);
+    const s = hexState({ pieces: K, hands: { A: [nine, num(0)], B: seven(), C: seven() } });
+    expect(apply(s, 'A', play(nine))).toEqual({ ok: false, error: 'Choose which opponent.' });
+    const after = ok(s, 'A', play(nine, { target: 'C' }));
+    expect(after.current).toBe('B');
   });
-  it('two skips at once', () => {
-    const a = card('draw2');
-    const b = card('draw2');
-    let s = hexState({ pieces: K, hands: { A: [a, num(0)], B: [b, num(0)] } });
-    s = ok(s, 'A', play(a, { target: 'C' }));
-    s = ok(s, 'B', play(b, { target: 'A' }));
-    expect(s.current).toBe('B');
-    expect(s.effects.pendingSkips).toEqual([]);
+  it('+2 and +4 take no target: the player who plays them draws', () => {
+    const d2 = card('draw2');
+    const s = hexState({ pieces: K, hands: { A: [d2, ...seven().slice(0, 6)], B: seven(), C: seven() } });
+    const after = ok(s, 'A', play(d2));
+    expect(after.hands.A).toHaveLength(8);
+    expect(after.hands.B).toHaveLength(7);
+    expect(after.hands.C).toHaveLength(7);
   });
   it('Trade Hands swaps only with the target', () => {
     const nine = num(9);
@@ -152,42 +145,31 @@ describe('targeted cards', () => {
     expect(s.seats).toEqual({ w: 'C', r: 'B', b: 'A' });
   });
   it('refuses a target who is eliminated or is yourself', () => {
-    const d2 = card('draw2');
-    const s = { ...hexState({ pieces: K, hands: { A: [d2, num(0)], C: seven() } }), eliminated: ['B'] };
-    expect(apply(s, 'A', play(d2, { target: 'B' }))).toEqual({ ok: false, error: "You can't choose that player." });
-    const t = hexState({ pieces: K, hands: { A: [d2, num(0)] } });
-    expect(apply(t, 'A', play(d2, { target: 'A' }))).toEqual({ ok: false, error: "You can't choose that player." });
+    const rev = card('reverse');
+    const s = { ...hexState({ pieces: K, hands: { A: [rev, num(0)] } }), eliminated: ['B'] };
+    expect(apply(s, 'A', play(rev, { target: 'B' }))).toEqual({ ok: false, error: "You can't choose that player." });
+    const t = hexState({ pieces: K, hands: { A: [rev, num(0)] } });
+    expect(apply(t, 'A', play(rev, { target: 'A' }))).toEqual({ ok: false, error: "You can't choose that player." });
     // with one active opponent left the target is filled in
-    const r = apply(s, 'A', play(d2));
+    const r = apply(s, 'A', play(rev));
     if (!r.ok) throw new Error(r.error);
-    expect(r.state.hands.C).toHaveLength(9); // C, the only active opponent, gets the cards
-    expect(r.state.hands.B).toHaveLength(1);
-    expect(r.state.current).toBe('A'); // B is eliminated and C is skipped
-    expect(r.state.effects.pendingSkips).toEqual([]);
+    expect(r.state.seats).toEqual({ w: 'C', r: 'B', b: 'A' }); // C, the only active opponent, swapped seats with A
+    expect(r.state.current).toBe('C'); // B is eliminated
   });
   it('fills the target in automatically in a two-player game', () => {
-    const d2 = card('draw2');
+    const rev = card('reverse');
     const s = createGame(3, ['A', 'B']);
-    const t = { ...s, hands: { ...s.hands, A: [d2, ...s.hands.A.slice(1)] } };
-    const r = apply(t, 'A', play(d2));
+    const t = { ...s, hands: { ...s.hands, A: [rev, ...s.hands.A.slice(1)] } };
+    const r = apply(t, 'A', play(rev));
     if (!r.ok) throw new Error(r.error);
-    expect(r.state.hands.B).toHaveLength(9); // B draws two
-    expect(r.state.current).toBe('A'); // B is skipped
-    expect(r.state.effects.pendingSkips).toEqual([]);
-    expect(r.state.log.map((e) => e.text)).toContain('made Black draw 2');
+    expect(r.state.seats).toEqual({ w: 'B', b: 'A' });
+    expect(r.state.log.map((e) => e.text)).toContain('switched sides with Black');
   });
   it('names the chosen seat in the log', () => {
-    const d2 = card('draw2');
-    const s = hexState({ pieces: K, hands: { A: [d2, num(0)] } });
-    expect(ok(s, 'A', play(d2, { target: 'B' })).log.map((e) => e.text)).toContain('made Red draw 2');
-    expect(ok(s, 'A', play(d2, { target: 'C' })).log.map((e) => e.text)).toContain('made Black draw 2');
-  });
-  it('a second +2 on an already-skipped player draws the cards but does not stack the skip', () => {
-    const d2 = card('draw2');
-    const base = hexState({ pieces: K, hands: { A: [d2, num(0)], C: seven() } });
-    const s = ok({ ...base, effects: { ...base.effects, pendingSkips: ['C'] } }, 'A', play(d2, { target: 'C' }));
-    expect(s.hands.C).toHaveLength(9);
-    expect(s.effects.pendingSkips).toEqual(['C']);
-    expect(s.current).toBe('B');
+    const nine = num(9);
+    const rev = card('reverse');
+    const s = hexState({ pieces: K, hands: { A: [nine, rev, num(0)] } });
+    expect(ok(s, 'A', play(nine, { target: 'B' })).log.map((e) => e.text)).toContain('traded hands with Red');
+    expect(ok(s, 'A', play(rev, { target: 'C' })).log.map((e) => e.text)).toContain('switched sides with Black');
   });
 });

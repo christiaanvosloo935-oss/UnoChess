@@ -54,7 +54,6 @@ export type Phase =
 export interface Effects {
   frozen: { pieceId: string; army: Army }[];
   shields: { pieceId: string; owner: PlayerId }[];
-  pendingSkips: PlayerId[];
 }
 
 export interface GameEvent {

@@ -41,14 +41,6 @@ describe('players are topped up to 7 cards', () => {
     expect(after.hands.B).toHaveLength(8);
   });
 
-  it('Draw Two still adds its cards on top of 7', () => {
-    const draw2 = card('draw2');
-    const s = stateFrom(START_FEN, { w: [draw2, ...zeros(6)], b: zeros(7) });
-    const after = ok(s, 'A', play(draw2));
-    expect(after.hands.B).toHaveLength(9);
-    expect(after.hands.A).toHaveLength(7);
-  });
-
   it('with three players everyone still in is topped up, an eliminated player is not', () => {
     const base = hexState({
       pieces: [['w', 'k', 'w.e1'], ['r', 'k', 'r.e1'], ['b', 'k', 'b.e1']],

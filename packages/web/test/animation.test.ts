@@ -93,8 +93,8 @@ describe('diffBoards', () => {
 
 describe('newEffects', () => {
   it('lists only the pieces that just became frozen or shielded', () => {
-    const none = { frozen: [], shields: [], pendingSkips: [] };
-    const next = { frozen: [{ pieceId: 'bq0', army: 'b' as const }], shields: [{ pieceId: 'wr0', owner: 'A' }], pendingSkips: [] };
+    const none = { frozen: [], shields: [] };
+    const next = { frozen: [{ pieceId: 'bq0', army: 'b' as const }], shields: [{ pieceId: 'wr0', owner: 'A' }] };
     expect(newEffects(none, next)).toEqual({ frozen: ['bq0'], shielded: ['wr0'] });
     expect(newEffects(next, next)).toEqual({ frozen: [], shielded: [] });
   });
