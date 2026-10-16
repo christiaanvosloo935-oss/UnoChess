@@ -68,7 +68,6 @@ describe('elimination', () => {
       effects: {
         frozen: [{ pieceId: 'rk0', army: 'r' }, { pieceId: 'bk0', army: 'b' }],
         shields: [{ pieceId: 'rk0', owner: 'B' }],
-        pendingSkips: [],
       },
     };
     const s = ok(withEffects, 'A', play(withEffects.hands.A[0]));
@@ -210,16 +209,9 @@ describe('resignation', () => {
       effects: {
         frozen: [{ pieceId: 'rp0', army: 'r' }, { pieceId: 'bk0', army: 'b' }],
         shields: [{ pieceId: 'rp0', owner: 'B' }, { pieceId: 'wk0', owner: 'A' }],
-        pendingSkips: [],
       },
     }, 'B', { type: 'resign' });
     expect(s.effects.frozen).toEqual([{ pieceId: 'bk0', army: 'b' }]);
     expect(s.effects.shields).toEqual([{ pieceId: 'wk0', owner: 'A' }]);
-  });
-
-  it('resigning clears a pending skip', () => {
-    const base = hexState({ pieces: [['w', 'k', 'w.e1'], ['b', 'k', 'b.e1'], ['r', 'k', 'r.e1']] });
-    const s = ok({ ...base, effects: { ...base.effects, pendingSkips: ['C'] } }, 'C', { type: 'resign' });
-    expect(s.effects.pendingSkips).toEqual([]);
   });
 });

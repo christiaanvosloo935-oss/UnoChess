@@ -36,7 +36,7 @@ export function createGame(seed: number, players: PlayerId[], variant: Variant =
     current: players[0],
     turn: 1,
     phase: { kind: 'awaitingCard' },
-    effects: { frozen: [], shields: [], pendingSkips: [] },
+    effects: { frozen: [], shields: [] },
     nextPieceId: 0,
     log: [],
   };
@@ -116,8 +116,8 @@ function playCard(s: GameState, player: PlayerId, action: Extract<Action, { type
       return 'That card is not implemented yet.';
     case 'skip': return shieldEffect(s, player, playedArmy, args);
     case 'reverse': return reverseEffect(s, player, playedArmy, target);
-    case 'draw2': return penaltyEffect(s, player, playedArmy, target, 2);
-    case 'wild4': return penaltyEffect(s, player, playedArmy, target, 4);
+    case 'draw2': return drawEffect(s, player, playedArmy, 2);
+    case 'wild4': return drawEffect(s, player, playedArmy, 4);
     case 'wild': return reviveEffect(s, player, playedArmy, args);
   }
 }
@@ -159,8 +159,8 @@ function shieldEffect(s: GameState, player: PlayerId, playedArmy: Army, args?: E
   endCard(s, player, playedArmy);
 }
 
-/** Cards that name an opponent: 9, Reverse, +2 and +4. */
-const TARGETED = ['n9', 'reverse', 'draw2', 'wild4'];
+/** Cards that name an opponent: 9 and Reverse. */
+const TARGETED = ['n9', 'reverse'];
 
 /** The chosen opponent, filled in automatically when only one is left. */
 function resolveTarget(s: GameState, player: PlayerId, target?: PlayerId): PlayerId | { error: string } {
@@ -185,10 +185,10 @@ function reverseEffect(s: GameState, player: PlayerId, playedArmy: Army, target:
   endCard(s, player, playedArmy);
 }
 
-function penaltyEffect(s: GameState, player: PlayerId, playedArmy: Army, target: PlayerId, count: number): void {
-  const drawn = drawFor(s, target, count);
-  if (!s.effects.pendingSkips.includes(target)) s.effects.pendingSkips.push(target);
-  log(s, player, `made ${ARMY_NAMES[armyOf(s, target)]} draw ${drawn}`);
+/** +2 / +4: the player who played the card draws the extra cards. They play down to 7 before drawing again. */
+function drawEffect(s: GameState, player: PlayerId, playedArmy: Army, count: number): void {
+  const drawn = drawFor(s, player, count);
+  log(s, player, `drew ${drawn} extra card${drawn === 1 ? '' : 's'}`);
   endCard(s, player, playedArmy);
 }
 
@@ -332,7 +332,6 @@ function eliminate(s: GameState, player: PlayerId, text: string): void {
     s.discardPile.push(...s.hands[player]);
     s.hands[player] = [];
   }
-  s.effects.pendingSkips = s.effects.pendingSkips.filter((p) => p !== player);
   s.effects.frozen = s.effects.frozen.filter((f) => f.army !== army);
   s.effects.shields = s.effects.shields.filter((sh) => sh.owner !== player);
   log(s, player, text);
@@ -352,9 +351,8 @@ function resign(s: GameState, player: PlayerId): void {
 
 /**
  * Starts the turn of `s.current`, passing over players who cannot play. Each pass of the loop
- * either stops on a playable mover, ends the game, or moves on after exactly one of: a pending
- * skip consumed (finitely many), a player eliminated (at most the player count), or a stalemate
- * skip. `stalled` counts consecutive stalemate skips and resets whenever the position or the
+ * either stops on a playable mover, ends the game, or moves on after exactly one of: a player
+ * eliminated (at most the player count), or a stalemate skip. `stalled` counts consecutive stalemate skips and resets whenever the position or the
  * set of skippable players changes, so it reaches the active player count only when every
  * active player is stalemated in a row, which is a draw. The loop therefore terminates.
  */
@@ -362,14 +360,6 @@ function beginTurn(s: GameState): void {
   let stalled = 0;
   for (;;) {
     s.effects.shields = s.effects.shields.filter((sh) => sh.owner !== s.current);
-    const skip = s.effects.pendingSkips.indexOf(s.current);
-    if (skip >= 0) {
-      s.effects.pendingSkips.splice(skip, 1);
-      log(s, s.current, 'skips their turn');
-      advance(s);
-      stalled = 0;
-      continue;
-    }
     const army = armyOf(s, s.current);
     const ctx = ctxFor(s, army);
     if (isInCheck(s.chess, army)) {

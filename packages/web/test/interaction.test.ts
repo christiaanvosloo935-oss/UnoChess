@@ -173,7 +173,7 @@ describe('targeted cards (three players)', () => {
   const click = (v: PlayerView, c: { id: string }) => step(v, IDLE, { type: 'clickCard', cardId: c.id, asOne: false });
 
   it('a targeted card with one opponent sends playCard without a target', () => {
-    const c = card('draw2');
+    const c = card('reverse');
     const s = three([c]);
     s.eliminated = ['C'];
     const v = viewFor(s, 'A');
@@ -183,8 +183,19 @@ describe('targeted cards (three players)', () => {
     expect(r.sel).toEqual(IDLE);
   });
 
+  it('+2 and +4 are sent at once even with two opponents, because nobody is chosen', () => {
+    for (const kind of ['draw2', 'wild4'] as const) {
+      const c = card(kind);
+      const v = viewFor(three([c]), 'A');
+      expect(v.options.targets).toEqual(['B', 'C']);
+      const r = click(v, c);
+      expect(r.send).toEqual({ type: 'playCard', cardId: c.id });
+      expect(r.sel).toEqual(IDLE);
+    }
+  });
+
   it('with two opponents clicking the card selects it and the prompt asks which opponent', () => {
-    const c = card('wild4');
+    const c = card('reverse');
     const v = viewFor(three([c]), 'A');
     const r = click(v, c);
     expect(r.send).toBeUndefined();

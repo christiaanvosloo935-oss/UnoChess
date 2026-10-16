@@ -74,9 +74,8 @@ export const GUIDE: GuideEntry[] = [
   },
   {
     title: 'Draw two',
-    text: 'Your opponent skips their next turn and draws 2 cards.',
+    text: 'You draw 2 extra cards and your turn ends. Play down to 7 before you draw again.',
     sample: sample('draw2', 'red'),
-    threePlayerNote: 'In a three-player game, you choose which opponent.',
     matches: kind('draw2'),
   },
   {
@@ -87,9 +86,8 @@ export const GUIDE: GuideEntry[] = [
   },
   {
     title: 'Draw four',
-    text: 'Your opponent skips their next turn and draws 4 cards.',
+    text: 'You draw 4 extra cards and your turn ends. Play down to 7 before you draw again.',
     sample: sample('wild4', null),
-    threePlayerNote: 'In a three-player game, you choose which opponent.',
     matches: kind('wild4'),
   },
 ];

@@ -31,13 +31,13 @@ describe('card guide', () => {
 });
 
 describe('three-player notes', () => {
-  it('exist for exactly the four targeted cards', () => {
+  it('exist for exactly the two targeted cards', () => {
     const deck = buildDeck();
     const noted = GUIDE.filter((e) => e.threePlayerNote).map((e) => e.title);
-    expect(noted).toHaveLength(4);
+    expect(noted).toHaveLength(2);
     for (const card of deck) {
       const entry = GUIDE.find((e) => e.matches(card))!;
-      const targeted = (card.kind === 'num' && card.value === 9) || ['reverse', 'draw2', 'wild4'].includes(card.kind);
+      const targeted = (card.kind === 'num' && card.value === 9) || card.kind === 'reverse';
       expect(!!entry.threePlayerNote, `${card.kind} ${card.value ?? ''}`).toBe(targeted);
     }
   });

@@ -40,7 +40,7 @@ export function stateFrom(
     current: toMove === 'w' ? 'A' : 'B',
     turn: 1,
     phase: { kind: 'awaitingCard' },
-    effects: { frozen: [], shields: [], pendingSkips: [] },
+    effects: { frozen: [], shields: [] },
     nextPieceId: 0,
     log: [],
   };
@@ -101,7 +101,7 @@ export function hexState(opts: {
     current: opts.current ?? 'A',
     turn: 1,
     phase: { kind: 'awaitingCard' },
-    effects: { frozen: [], shields: [], pendingSkips: [] },
+    effects: { frozen: [], shields: [] },
     nextPieceId: 0,
     log: [],
   };

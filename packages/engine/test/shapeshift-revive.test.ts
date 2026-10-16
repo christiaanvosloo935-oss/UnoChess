@@ -82,7 +82,7 @@ describe('8 · Shapeshift', () => {
     const base = stateFrom('4k3/8/8/3q4/8/8/3B4/4K3 w - - 0 1', { w: [eight] });
     const queen = idAt(base, 'd5');
     expect(legalShapeshifts(base, 'A').some((o) => o.as === 'r' && o.to === sq('d5'))).toBe(true);
-    const shielded: GameState = { ...base, effects: { frozen: [], shields: [{ pieceId: queen, owner: 'B' }], pendingSkips: [] } };
+    const shielded: GameState = { ...base, effects: { frozen: [], shields: [{ pieceId: queen, owner: 'B' }] } };
     expect(legalShapeshifts(shielded, 'A').some((o) => o.to === sq('d5'))).toBe(false);
   });
 
