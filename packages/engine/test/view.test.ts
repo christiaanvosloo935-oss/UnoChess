@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { START_FEN, apply, viewFor, legalOptions, type Action, type GameState } from '../src/index.js';
-import { card, num, sq, stateFrom } from './helpers.js';
+import { card, num, rest, sq, stateFrom } from './helpers.js';
 
 function ok(state: GameState, player: string, action: Action): GameState {
   const r = apply(state, player, action);
@@ -20,8 +20,26 @@ describe('viewFor', () => {
     expect(view.hand.map((c) => c.id)).toEqual(s.hands.A.map((c) => c.id));
   });
 
+  it("reveals the winner's hand to a checkmated player only", () => {
+    const one = num(1);
+    const keep = [num(4), num(5)];
+    let s = stateFrom('7k/5Q2/6K1/8/8/8/8/8 w - - 0 1', { w: [one, ...keep], b: [num(2)] });
+    expect(viewFor(s, 'B').opponentHand).toBeNull();
+    s = ok(s, 'A', { type: 'playCard', cardId: one.id });
+    s = ok(s, 'A', { type: 'move', from: sq('f7'), to: sq('g7') });
+    expect(s.phase).toMatchObject({ kind: 'over', winner: 'A', reason: 'checkmate' });
+    expect(viewFor(s, 'B').opponentHand?.map((c) => c.id)).toEqual(s.hands.A.map((c) => c.id));
+    expect(viewFor(s, 'A').opponentHand).toBeNull();
+  });
+
+  it('keeps hands hidden when a game ends any other way', () => {
+    const s = ok(stateFrom(START_FEN), 'B', { type: 'resign' });
+    expect(viewFor(s, 'A').opponentHand).toBeNull();
+    expect(viewFor(s, 'B').opponentHand).toBeNull();
+  });
+
   it('shows only the top of the discard pile', () => {
-    const zero = num(0);
+    const zero = rest();
     let s = stateFrom(START_FEN, { w: [zero, num(1)] });
     s = ok(s, 'A', { type: 'playCard', cardId: zero.id });
     const view = viewFor(s, 'B');

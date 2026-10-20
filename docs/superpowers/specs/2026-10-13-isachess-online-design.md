@@ -87,7 +87,7 @@ DRAW (see §5.7).
 
 | Card | Effect |
 |---|---|
-| 0 · Rest | No moves this turn. |
+| 0 · Joker | Becomes any other card of your choice (1–9, Shield, Switch sides, Draw Two, Revive, Draw Four) and that card's effect happens. In check it can only become a card that escapes check. |
 | 1–5 · Moves | Make that many moves, one after another (multi-move rules below). |
 | 6 · Swap | Swap the positions of any two of your own pieces. |
 | 7 · Freeze | One enemy piece can't move on the opponent's next turn. It can still be captured. |
@@ -121,7 +121,7 @@ engine and every one gets a test.
 3. **In check, the card must get you out.** While in check, a player may play a card for
    its effect only if that effect resolves the check. That means a move card's first move
    (rule C), a Shapeshift move, a Swap, or a Revive that blocks. Cards that make no move
-   (0, Shield, Freeze, 9, Draw Two, Draw Four, Reverse) can't be played for their effect
+   (Shield, Freeze, 9, Draw Two, Draw Four, Reverse) can't be played for their effect
    while in check. Instead, **any card may be played as a "1"** to make one escaping move.
    This fallback is always available, so a player who is in check but not checkmated can
    always continue.
@@ -154,7 +154,7 @@ engine and every one gets a test.
     whether that is a played turn or a skipped one.
 13. **Stalemate.** If the player to move isn't in check and their army has no legal
     ordinary chess move, the game is drawn. Holding only "useless" cards isn't a
-    stalemate: such a player can always play a card (e.g. a 0).
+    stalemate: such a player can always play a card.
 14. **Multi-move stopping early.** A player may end a 1–5 card turn early with
     **Done moving** at any point, even before the first move. The exception is rule C: when
     in check, the first (escaping) move is required. If no legal move remains for any unmoved piece, the turn ends
@@ -262,3 +262,9 @@ engine and every one gets a test.
 - `npm run build` builds the engine, web and server. `npm start` serves everything on `PORT`.
 - `render.yaml` describes one Node web service.
 - The README explains how to connect the repository on Render.
+
+
+## Later additions
+
+- **Checkmate reveal.** Once a player has been checkmated they see their opponent's whole hand (in the game-over box). Hands stay hidden after a stalemate or resignation.
+- **Piece colours.** Each player picks a colour for their pieces (red, orange, yellow, green, blue, indigo, violet, black or white) when starting a game or opening a join link. The colour belongs to the player, so it follows them when sides are switched and both players see both colours. If a joiner picks the colour the creator already has, the server gives them black (or white) instead.

@@ -2,10 +2,12 @@ import { useState } from 'react';
 import { createGame } from '../api';
 import { Brand } from './Brand';
 import { CardGuideModal } from './CardGuide';
-import { getNickname, saveNickname, setSeat } from '../seat';
+import { getColour, getNickname, saveColour, saveNickname, setSeat } from '../seat';
+import { ColourPicker } from './ColourPicker';
 
 export function Home({ note, go }: { note?: string; go: (path: string) => void }) {
   const [nick, setNick] = useState(getNickname());
+  const [colour, setColour] = useState(getColour());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [guide, setGuide] = useState(false);
@@ -16,8 +18,9 @@ export function Home({ note, go }: { note?: string; go: (path: string) => void }
     setBusy(true);
     setError(null);
     try {
-      const game = await createGame(name);
+      const game = await createGame(name, colour);
       saveNickname(name);
+      saveColour(colour);
       setSeat(game.gameId, game.seatToken);
       go(`/g/${game.gameId}`);
     } catch (e) {
@@ -36,6 +39,7 @@ export function Home({ note, go }: { note?: string; go: (path: string) => void }
           Your nickname
           <input value={nick} maxLength={20} autoFocus onChange={(e) => setNick(e.target.value)} data-testid="nickname" />
         </label>
+        <ColourPicker value={colour} onChange={setColour} />
         <button type="submit" disabled={busy} data-testid="new-game">New game</button>
       </form>
       {error && <p className="error">{error}</p>}

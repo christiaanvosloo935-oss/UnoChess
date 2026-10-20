@@ -1,5 +1,5 @@
 import { applyChessMove, isInCheck, legalMoves, movesAs } from './chess.js';
-import { legalFreezeTargets, legalRevives, legalShapeshifts, legalShieldTargets, legalSwaps, playableCards, squareOfPiece, swapSquares } from './cards.js';
+import { asChoice, isJoker, isJokerChoice, legalFreezeTargets, legalJokerChoices, legalRevives, legalShapeshifts, legalShieldTargets, legalSwaps, playableCards, squareOfPiece, swapSquares } from './cards.js';
 import { buildDeck, drawCards } from './deck.js';
 import { fromFen, START_FEN } from './fen.js';
 import { shuffle } from './rng.js';
@@ -32,11 +32,11 @@ export function createGame(seed: number, white: PlayerId, black: PlayerId): Game
 
 export function cardLabel(card: Card): string {
   switch (card.kind) {
-    case 'num': return String(card.value);
-    case 'skip': return 'Skip';
-    case 'reverse': return 'Reverse';
+    case 'num': return card.value === 0 ? 'Joker' : String(card.value);
+    case 'skip': return 'Shield';
+    case 'reverse': return 'Switch sides';
     case 'draw2': return '+2';
-    case 'wild': return 'Wild';
+    case 'wild': return 'Revive';
     case 'wild4': return '+4';
   }
 }
@@ -82,21 +82,28 @@ function playCard(s: GameState, player: PlayerId, action: Extract<Action, { type
   if (!asOne && !option.asEffect) {
     return 'You are in check: play a card that escapes it, or play any card as a 1.';
   }
+  let played = card;
+  if (isJoker(card) && !asOne) {
+    if (!isJokerChoice(action.joker) || !legalJokerChoices(s, player).some((c) => c.kind === action.joker!.kind && c.value === action.joker!.value)) {
+      return inCheckNow(s) ? 'Pick a card for your Joker that escapes check.' : 'Pick what your Joker becomes.';
+    }
+    played = asChoice(card, action.joker);
+  }
   const playedArmy = armyOf(s, player);
   hand.splice(idx, 1);
   s.discardPile.push(card);
-  log(s, player, asOne ? `played ${cardLabel(card)} as a 1` : `played ${cardLabel(card)}`);
+  log(s, player, asOne ? `played ${cardLabel(card)} as a 1` : card === played ? `played ${cardLabel(card)}` : `played Joker as ${cardLabel(played)}`);
 
   if (asOne) return startMoving(s, player, card.id, 1);
   const args = action.args;
-  switch (card.kind) {
+  switch (played.kind) {
     case 'num':
-      if (card.value === 0) return endCard(s, player, playedArmy);
-      if (card.value! <= 5) return startMoving(s, player, card.id, card.value!);
-      if (card.value === 6) return swapEffect(s, player, playedArmy, args);
-      if (card.value === 7) return freezeEffect(s, player, playedArmy, args);
-      if (card.value === 8) return shapeshiftEffect(s, player, playedArmy, args);
-      if (card.value === 9) return tradeEffect(s, player, playedArmy);
+      if (played.value === 0) return endCard(s, player, playedArmy);
+      if (played.value! <= 5) return startMoving(s, player, card.id, played.value!);
+      if (played.value === 6) return swapEffect(s, player, playedArmy, args);
+      if (played.value === 7) return freezeEffect(s, player, playedArmy, args);
+      if (played.value === 8) return shapeshiftEffect(s, player, playedArmy, args);
+      if (played.value === 9) return tradeEffect(s, player, playedArmy);
       return 'That card is not implemented yet.';
     case 'skip': return shieldEffect(s, player, playedArmy, args);
     case 'reverse': return reverseEffect(s, player, playedArmy);

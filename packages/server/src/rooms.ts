@@ -1,7 +1,7 @@
 import { randomBytes, randomInt, randomUUID, timingSafeEqual } from 'node:crypto';
 import {
-  apply, createGame, viewFor,
-  type Action, type ChatMessage, type GameState, type PlayerId, type RoomInfo, type ServerMessage,
+  PIECE_COLOURS, apply, createGame, viewFor,
+  type Action, type ChatMessage, type GameState, type PieceColour, type PlayerId, type RoomInfo, type ServerMessage,
 } from '@isachess/engine';
 
 const ID_CHARS = 'abcdefghjkmnpqrstuvwxyz23456789';
@@ -13,6 +13,7 @@ export interface Seat {
   playerId: PlayerId;
   token: string;
   nickname: string;
+  colour: PieceColour;
 }
 
 export interface Room {
@@ -45,6 +46,17 @@ function cleanName(raw: string): string {
   return raw.trim().slice(0, 20) || 'Player';
 }
 
+export function parseColour(raw: unknown): PieceColour | undefined {
+  return PIECE_COLOURS.find((c) => c === raw);
+}
+
+/** The wanted colour, unless the other player already has it: then black or white, else the first free colour. */
+function freeColour(wanted: PieceColour | undefined, taken: PieceColour | undefined): PieceColour {
+  const want = wanted ?? 'black';
+  if (want !== taken) return want;
+  return (['black', 'white', ...PIECE_COLOURS] as PieceColour[]).find((c) => c !== taken)!;
+}
+
 export class Rooms {
   private rooms = new Map<string, Room>();
   private listeners = new Set<(gameId: string) => void>();
@@ -69,16 +81,16 @@ export class Rooms {
     return this.rooms.get(gameId);
   }
 
-  private newSeat(nickname: string): Seat {
-    return { playerId: randomUUID(), token: randomBytes(24).toString('base64url'), nickname: cleanName(nickname) };
+  private newSeat(nickname: string, colour: PieceColour): Seat {
+    return { playerId: randomUUID(), token: randomBytes(24).toString('base64url'), nickname: cleanName(nickname), colour };
   }
 
-  create(nickname: string): { gameId: string; seatToken: string; playerId: PlayerId } {
+  create(nickname: string, colour?: PieceColour): { gameId: string; seatToken: string; playerId: PlayerId } {
     let gameId: string;
     do {
       gameId = Array.from({ length: 6 }, () => ID_CHARS[randomInt(ID_CHARS.length)]).join('');
     } while (this.rooms.has(gameId));
-    const seat = this.newSeat(nickname);
+    const seat = this.newSeat(nickname, colour ?? 'white');
     this.rooms.set(gameId, {
       id: gameId,
       seats: [seat],
@@ -94,6 +106,7 @@ export class Rooms {
     gameId: string,
     nickname: string,
     seatToken?: string,
+    colour?: PieceColour,
   ): { ok: true; playerId: PlayerId; seatToken: string } | { ok: false; reason: 'not-found' | 'full' } {
     const room = this.rooms.get(gameId);
     if (!room) return { ok: false, reason: 'not-found' };
@@ -101,11 +114,16 @@ export class Rooms {
     const existing = seatToken ? room.seats.find((s) => sameToken(s.token, seatToken)) : undefined;
     if (existing) return { ok: true, playerId: existing.playerId, seatToken: existing.token };
     if (room.seats.length >= 2) return { ok: false, reason: 'full' };
-    const seat = this.newSeat(nickname);
+    const seat = this.newSeat(nickname, freeColour(colour, room.seats[0].colour));
     room.seats.push(seat);
     room.state = createGame(this.seed(), room.seats[0].playerId, seat.playerId);
     this.emit(gameId);
     return { ok: true, playerId: seat.playerId, seatToken: seat.token };
+  }
+
+  /** The colour the first player picked, so a newcomer's picker can mark it as taken. */
+  hostColour(gameId: string): PieceColour | undefined {
+    return this.rooms.get(gameId)?.seats[0]?.colour;
   }
 
   attach(gameId: string, playerId: PlayerId): void {
@@ -180,10 +198,11 @@ export class Rooms {
   snapshot(gameId: string, playerId: PlayerId): ServerMessage | null {
     const room = this.rooms.get(gameId);
     if (!room) return null;
-    if (!room.state) return { type: 'lobby', gameId, names: room.seats.map((s) => s.nickname) };
+    if (!room.state) return { type: 'lobby', gameId, names: room.seats.map((s) => s.nickname), colours: room.seats.map((s) => s.colour) };
     const opponent = room.state.players.find((p) => p !== playerId)!;
     const info: RoomInfo = {
       names: Object.fromEntries(room.seats.map((s) => [s.playerId, s.nickname])),
+      colours: Object.fromEntries(room.seats.map((s) => [s.playerId, s.colour])),
       opponentConnected: (room.connections[opponent] ?? 0) > 0,
       rematch: { you: room.rematchVotes.has(playerId), opponent: room.rematchVotes.has(opponent) },
     };

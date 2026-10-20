@@ -1,7 +1,7 @@
 import type { Server } from 'node:http';
 import { WebSocket, WebSocketServer } from 'ws';
 import type { Action, ClientMessage, PlayerId, ServerMessage } from '@isachess/engine';
-import type { Rooms } from './rooms.js';
+import { parseColour, type Rooms } from './rooms.js';
 
 interface Client {
   ws: WebSocket;
@@ -25,7 +25,7 @@ function parse(raw: string): ClientMessage | null {
       if (typeof m.gameId !== 'string') return null;
       if (m.nickname !== undefined && typeof m.nickname !== 'string') return null;
       if (m.seatToken !== undefined && typeof m.seatToken !== 'string') return null;
-      return { type: 'join', gameId: m.gameId, nickname: (m.nickname as string | undefined) ?? '', seatToken: m.seatToken as string | undefined };
+      return { type: 'join', gameId: m.gameId, nickname: (m.nickname as string | undefined) ?? '', seatToken: m.seatToken as string | undefined, colour: parseColour(m.colour) };
     case 'action':
       if (typeof m.action !== 'object' || m.action === null || typeof (m.action as { type?: unknown }).type !== 'string') return null;
       return { type: 'action', action: m.action as Action };
@@ -67,7 +67,7 @@ export function attachWebSocket(server: Server, rooms: Rooms): WebSocketServer {
 
       if (msg.type === 'join') {
         if (me) return send(ws, { type: 'error', message: 'Already joined.' });
-        const result = rooms.join(msg.gameId, msg.nickname, msg.seatToken);
+        const result = rooms.join(msg.gameId, msg.nickname, msg.seatToken, msg.colour);
         if (!result.ok) return send(ws, { type: 'gone', reason: result.reason });
         me = { ws, gameId: msg.gameId, playerId: result.playerId };
         let set = clients.get(msg.gameId);

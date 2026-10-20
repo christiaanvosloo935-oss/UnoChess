@@ -20,8 +20,8 @@ const kind = (k: Card['kind']) => (card: Card) => card.kind === k;
 
 export const GUIDE: GuideEntry[] = [
   {
-    title: '0 · Rest',
-    text: 'You pass. Make no moves this turn.',
+    title: '0 · Joker',
+    text: "A wildcard: when you play it, choose any other card for it to become, such as a 5 or Switch sides, and that card happens. While you're in check it can only become a card that escapes check.",
     sample: sample('num', 'red', 0),
     matches: num(0),
   },

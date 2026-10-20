@@ -1,17 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { Action, ChatMessage, PlayerView, RoomInfo, ServerMessage } from '@isachess/engine';
+import type { Action, ChatMessage, PieceColour, PlayerView, RoomInfo, ServerMessage } from '@isachess/engine';
 import { getSeat, setSeat } from './seat';
 
 export type GameConn =
   | { status: 'connecting' | 'reconnecting' }
-  | { status: 'lobby'; names: string[] }
+  | { status: 'lobby'; names: string[]; colours: PieceColour[] }
   | { status: 'playing'; view: PlayerView; room: RoomInfo }
   | { status: 'gone'; reason: 'not-found' | 'full' };
 
 const BACKOFF_MS = [1000, 2000, 4000, 8000];
 const CHAT_KEEP = 100;
 
-export function useGame(gameId: string, nickname: string | null) {
+export function useGame(gameId: string, nickname: string | null, colour: PieceColour) {
   const [conn, setConn] = useState<GameConn>({ status: 'connecting' });
   const [error, setError] = useState<{ text: string; n: number } | null>(null);
   const [chat, setChat] = useState<ChatMessage[]>([]);
@@ -30,14 +30,14 @@ export function useGame(gameId: string, nickname: string | null) {
       socket.current = ws;
       ws.onopen = () => {
         attempt = 0;
-        ws.send(JSON.stringify({ type: 'join', gameId, nickname, seatToken: getSeat(gameId) }));
+        ws.send(JSON.stringify({ type: 'join', gameId, nickname, colour, seatToken: getSeat(gameId) }));
       };
       ws.onmessage = (ev) => {
         const msg = JSON.parse(String(ev.data)) as ServerMessage;
         switch (msg.type) {
           case 'joined': setSeat(gameId, msg.seatToken); setMe(msg.playerId); break;
           case 'chat': setChat((c) => [...c, msg.message].slice(-CHAT_KEEP)); break;
-          case 'lobby': setConn({ status: 'lobby', names: msg.names }); break;
+          case 'lobby': setConn({ status: 'lobby', names: msg.names, colours: msg.colours }); break;
           case 'state': setConn({ status: 'playing', view: msg.view, room: msg.room }); break;
           case 'error': setError((e) => ({ text: msg.message, n: (e?.n ?? 0) + 1 })); break;
           case 'gone':
@@ -59,7 +59,7 @@ export function useGame(gameId: string, nickname: string | null) {
       clearTimeout(timer);
       socket.current?.close();
     };
-  }, [gameId, nickname]);
+  }, [gameId, nickname]); // colour is only sent when first joining, so later picks don't reconnect
 
   const sendRaw = useCallback((msg: unknown) => {
     if (socket.current?.readyState === WebSocket.OPEN) socket.current.send(JSON.stringify(msg));

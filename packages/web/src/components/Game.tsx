@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import type { ChatMessage, PlayerView, PromotionType, RoomInfo, Square } from '@isachess/engine';
-import { highlights, prompt, roleOf, step, type Selection, type UiEvent } from '../interaction';
+import type { Army, ChatMessage, PieceColour, PlayerView, PromotionType, RoomInfo, Square } from '@isachess/engine';
+import { chosenRole, highlights, prompt, step, type Selection, type UiEvent } from '../interaction';
 import type { Action } from '@isachess/engine';
 import { Board } from './Board';
 import { CardGuide } from './CardGuide';
@@ -8,8 +8,9 @@ import { Chat } from './Chat';
 import { CardBack, CardView } from './CardView';
 import { GameOver } from './GameOver';
 import { PieceIcon } from './PieceIcon';
-import { PromotionPicker, RevivePicker, ShapeshiftPicker } from './Pickers';
+import { JokerPicker, PromotionPicker, RevivePicker, ShapeshiftPicker } from './Pickers';
 import { Toast } from './Toast';
+import { DEFAULT_COLOURS } from '../pieceColours';
 
 const IDLE: Selection = { kind: 'idle' };
 
@@ -65,9 +66,15 @@ export function Game({ view, room, send, rematch, chat, me, sendChat, lastError,
   }
 
   const card = sel.kind === 'cardChosen' ? view.hand.find((c) => c.id === sel.cardId) : undefined;
-  const role = card ? roleOf(card) : 'plain';
+  const role = sel.kind === 'cardChosen' ? chosenRole(view, sel) : 'plain';
+  const opponentArmy: Army = view.yourArmy === 'w' ? 'b' : 'w';
+  const colours: Record<Army, PieceColour> = {
+    [view.yourArmy]: room.colours[view.you] ?? DEFAULT_COLOURS[view.yourArmy],
+    [opponentArmy]: room.colours[view.opponent] ?? DEFAULT_COLOURS[opponentArmy],
+  } as Record<Army, PieceColour>;
   const awaitingPromotion = (sel.kind === 'pieceChosen' && sel.to !== undefined) || (sel.kind === 'cardChosen' && sel.square !== undefined);
   const needsType = sel.kind === 'cardChosen' && role === 'shapeshift' && sel.picks[0] && !sel.as && sel.square === undefined;
+  const needsJoker = sel.kind === 'cardChosen' && role === 'joker';
   const needsCaptured = sel.kind === 'cardChosen' && role === 'revive' && sel.capturedIndex === undefined;
   const name = (id: string) => room.names[id] ?? 'Player';
   const resign = () => {
@@ -85,7 +92,7 @@ export function Game({ view, room, send, rematch, chat, me, sendChat, lastError,
         <p className={`status${view.inCheck === view.yourArmy ? ' alert' : ''}`} data-testid="status">
           {statusText(view, room, sel)}
         </p>
-        <Board view={view} selectable={selectable} targets={targets} selected={selectedSquares} onSquare={(s) => dispatch({ type: 'clickSquare', sq: s })} />
+        <Board view={view} selectable={selectable} targets={targets} selected={selectedSquares} colours={colours} onSquare={(s) => dispatch({ type: 'clickSquare', sq: s })} />
         <div className="seat me">
           <strong>{name(view.you)}</strong>
           <span className="muted">playing {view.yourArmy === 'w' ? 'White' : 'Black'}</span>
@@ -120,7 +127,7 @@ export function Game({ view, room, send, rematch, chat, me, sendChat, lastError,
         <div className="captured">
           {(['w', 'b'] as const).map((army) => (
             <div key={army} className="muted">
-              {army === 'w' ? 'White' : 'Black'} lost: {view.captured[army].map((t, i) => <PieceIcon key={i} army={army} type={t} className="small" />)}
+              {army === 'w' ? 'White' : 'Black'} lost: {view.captured[army].map((t, i) => <PieceIcon key={i} army={army} colour={colours[army]} type={t} className="small" />)}
             </div>
           ))}
         </div>
@@ -139,13 +146,16 @@ export function Game({ view, room, send, rematch, chat, me, sendChat, lastError,
       </aside>
 
       {awaitingPromotion && (
-        <PromotionPicker army={view.yourArmy} onPick={(p: PromotionType) => dispatch({ type: 'choosePromotion', p })} onCancel={() => dispatch({ type: 'cancel' })} />
+        <PromotionPicker army={view.yourArmy} colour={colours[view.yourArmy]} onPick={(p: PromotionType) => dispatch({ type: 'choosePromotion', p })} onCancel={() => dispatch({ type: 'cancel' })} />
+      )}
+      {needsJoker && card && (
+        <JokerPicker view={view} card={card} onPick={(choice) => dispatch({ type: 'chooseJoker', choice })} onCancel={() => dispatch({ type: 'cancel' })} />
       )}
       {needsType && sel.kind === 'cardChosen' && (
-        <ShapeshiftPicker view={view} pieceId={sel.picks[0]} onPick={(t) => dispatch({ type: 'chooseType', as: t })} onCancel={() => dispatch({ type: 'cancel' })} />
+        <ShapeshiftPicker view={view} colour={colours[view.yourArmy]} pieceId={sel.picks[0]} onPick={(t) => dispatch({ type: 'chooseType', as: t })} onCancel={() => dispatch({ type: 'cancel' })} />
       )}
       {needsCaptured && (
-        <RevivePicker view={view} onPick={(index, asQueen) => dispatch({ type: 'chooseCaptured', index, asQueen })} onCancel={() => dispatch({ type: 'cancel' })} />
+        <RevivePicker view={view} colour={colours[view.yourArmy]} onPick={(index, asQueen) => dispatch({ type: 'chooseCaptured', index, asQueen })} onCancel={() => dispatch({ type: 'cancel' })} />
       )}
       <GameOver view={view} room={room} onRematch={rematch} />
       <Toast text={lastError} tick={errorKey} onDone={clearError} />

@@ -3,7 +3,7 @@ import {
   START_FEN, apply, legalSwaps, legalShieldTargets, legalFreezeTargets, playableCards, armyOf,
   type Action, type GameState,
 } from '../src/index.js';
-import { card, num, sq, stateFrom } from './helpers.js';
+import { card, num, rest, sq, stateFrom } from './helpers.js';
 
 function ok(state: GameState, player: string, action: Action): GameState {
   const r = apply(state, player, action);
@@ -59,7 +59,7 @@ describe('6 · Swap', () => {
 
   it('a swap that escapes check is playable as an effect while in check', () => {
     const six = num(6);
-    const zero = num(0);
+    const zero = rest();
     const s = stateFrom('4r1k1/8/8/8/8/8/8/R3K3 w Q - 0 1', { w: [six, zero] });
     const options = playableCards(s, 'A');
     expect(options.find((o) => o.cardId === six.id)).toMatchObject({ asEffect: true, asOne: true });
@@ -94,7 +94,7 @@ describe('6 · Swap and frozen pieces', () => {
 describe('7 · Freeze', () => {
   it("a frozen piece can't move on its army's next turn, and can the turn after", () => {
     const seven = num(7);
-    const zero = num(0);
+    const zero = rest();
     const b1 = num(1);
     const b2 = num(1);
     let s = stateFrom('4k3/8/8/3q4/8/8/8/4K3 w - - 0 1', { w: [seven, zero], b: [b1, b2] });
@@ -111,8 +111,8 @@ describe('7 · Freeze', () => {
   });
 
   it('a freeze survives a skipped turn (§5.11)', () => {
-    const zero1 = num(0);
-    const zero2 = num(0);
+    const zero1 = rest();
+    const zero2 = rest();
     const b1 = num(1);
     const base = stateFrom('4k3/8/8/3q4/8/8/8/4K3 w - - 0 1', { w: [zero1, zero2], b: [b1] });
     let s: GameState = {
@@ -138,7 +138,7 @@ describe('Skip · Shield', () => {
 
   it('a shielded queen cannot be captured until its owner’s next turn starts', () => {
     const shield = card('skip');
-    const zeroA = num(0);
+    const zeroA = rest();
     const b1 = num(1);
     let s = stateFrom(FEN, { w: [shield, zeroA], b: [b1] });
     s = ok(s, 'A', play(shield, { type: 'shield', pieceId: idAt(s, 'd2') }));
@@ -229,7 +229,7 @@ describe('Reverse', () => {
 describe('Draw Two / Wild Draw Four', () => {
   it('draw2: opponent gets +2, is skipped, and the player goes again', () => {
     const d2 = card('draw2');
-    const s = stateFrom(START_FEN, { w: [d2, num(0)], b: [num(1)] });
+    const s = stateFrom(START_FEN, { w: [d2, rest()], b: [num(1)] });
     const after = ok(s, 'A', play(d2));
     expect(after.hands.B).toHaveLength(3);
     expect(after.current).toBe('A');
@@ -239,15 +239,15 @@ describe('Draw Two / Wild Draw Four', () => {
 
   it('wild4: opponent gets +4 and is skipped', () => {
     const w4 = card('wild4');
-    const s = stateFrom(START_FEN, { w: [w4, num(0)], b: [num(1)] });
+    const s = stateFrom(START_FEN, { w: [w4, rest()], b: [num(1)] });
     const after = ok(s, 'A', play(w4));
     expect(after.hands.B).toHaveLength(5);
     expect(after.current).toBe('A');
   });
 
   it('a hand over 7 plays one card per turn and only draws once below 7 (§5.9)', () => {
-    const bHand = Array.from({ length: 11 }, () => num(0));
-    const aHand = Array.from({ length: 7 }, () => num(0));
+    const bHand = Array.from({ length: 11 }, () => rest());
+    const aHand = Array.from({ length: 7 }, () => rest());
     let s = stateFrom(START_FEN, { w: aHand, b: bHand }, { current: 'B' });
     s = { ...s, chess: stateFrom('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkq - 0 1').chess };
     const sizes: number[] = [];
@@ -261,7 +261,7 @@ describe('Draw Two / Wild Draw Four', () => {
 
   it('when both piles are exhausted the opponent draws what exists and play continues', () => {
     const w4 = card('wild4');
-    const s = stateFrom(START_FEN, { w: [w4, num(0)], b: [num(1)] }, { drawPile: [], discardPile: [] });
+    const s = stateFrom(START_FEN, { w: [w4, rest()], b: [num(1)] }, { drawPile: [], discardPile: [] });
     const after = ok(s, 'A', play(w4));
     expect(after.hands.B).toHaveLength(1);
     expect(after.current).toBe('A');

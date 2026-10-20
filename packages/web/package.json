@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -p tsconfig.json --noEmit && vite build",
-    "test": "vitest run"
+    "test": "vitest run",
+    "tint-pieces": "node scripts/tint-pieces.mjs"
   },
   "dependencies": {
     "react": "^19.0.0",

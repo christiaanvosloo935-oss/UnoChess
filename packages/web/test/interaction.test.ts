@@ -164,3 +164,41 @@ describe('moving phase', () => {
     expect(r.send).toEqual({ type: 'move', from: sq('a7'), to: sq('a8'), promotion: 'n' });
   });
 });
+
+describe('Joker (0 card)', () => {
+  const choice = (kind: 'num' | 'reverse' | 'wild4', value?: number) => ({ kind, ...(value !== undefined ? { value } : {}) });
+
+  it('clicking a Joker asks what it becomes; a plain choice then plays straight away', () => {
+    const j = num(0);
+    const v = viewA(stateFrom(START_FEN, { w: [j] }));
+    const picked = step(v, IDLE, { type: 'clickCard', cardId: j.id, asOne: false });
+    expect(picked.send).toBeUndefined();
+    expect(prompt(v, picked.sel)).toMatch(/Joker/);
+    const r = step(v, picked.sel, { type: 'chooseJoker', choice: choice('num', 5) });
+    expect(r.send).toEqual({ type: 'playCard', cardId: j.id, joker: { kind: 'num', value: 5 } });
+    expect(step(v, picked.sel, { type: 'chooseJoker', choice: choice('reverse') }).send).toEqual({ type: 'playCard', cardId: j.id, joker: { kind: 'reverse' } });
+  });
+
+  it('a Joker that becomes a targeted card keeps the choice and sends it with the target', () => {
+    const j = num(0);
+    const s = stateFrom(START_FEN, { w: [j] });
+    const v = viewA(s);
+    const target = idAt(s, 'e7');
+    let r = step(v, IDLE, { type: 'clickCard', cardId: j.id, asOne: false });
+    r = step(v, r.sel, { type: 'chooseJoker', choice: choice('num', 7) });
+    expect(r.send).toBeUndefined();
+    expect(highlights(v, r.sel).selectable).toContain(sq('e7'));
+    expect(prompt(v, r.sel)).toMatch(/Freeze/);
+    const done = step(v, r.sel, { type: 'clickSquare', sq: sq('e7') });
+    expect(done.send).toEqual({ type: 'playCard', cardId: j.id, joker: { kind: 'num', value: 7 }, args: { type: 'freeze', pieceId: target } });
+  });
+
+  it('in check only escaping choices are accepted', () => {
+    const j = num(0);
+    const v = viewA(stateFrom('4r1k1/8/8/8/8/8/8/4K3 w - - 0 1', { w: [j] }));
+    const picked = step(v, IDLE, { type: 'clickCard', cardId: j.id, asOne: false });
+    expect(picked.sel.kind).toBe('cardChosen');
+    expect(step(v, picked.sel, { type: 'chooseJoker', choice: choice('wild4') }).send).toBeUndefined();
+    expect(step(v, picked.sel, { type: 'chooseJoker', choice: choice('num', 2) }).send).toBeDefined();
+  });
+});
