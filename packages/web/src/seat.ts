@@ -1,3 +1,6 @@
+import { PIECE_COLOURS } from './pieceColours';
+import type { PieceColour } from '@isachess/engine';
+
 const MAX_AGE = 7 * 24 * 60 * 60;
 
 export function getSeat(gameId: string): string | undefined {
@@ -25,5 +28,23 @@ export function saveNickname(nick: string): void {
     localStorage.setItem(NICK_KEY, nick);
   } catch {
     /* private mode: remembering the nickname is only a convenience */
+  }
+}
+
+const COLOUR_KEY = 'uc_colour';
+
+export function getColour(): PieceColour {
+  try {
+    return PIECE_COLOURS.find((c) => c === localStorage.getItem(COLOUR_KEY)) ?? 'white';
+  } catch {
+    return 'white';
+  }
+}
+
+export function saveColour(colour: PieceColour): void {
+  try {
+    localStorage.setItem(COLOUR_KEY, colour);
+  } catch {
+    /* private mode: remembering the colour is only a convenience */
   }
 }

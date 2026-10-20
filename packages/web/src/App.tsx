@@ -5,7 +5,10 @@ import { Chat } from './components/Chat';
 import { Game } from './components/Game';
 import { Home } from './components/Home';
 import { useGame } from './useGame';
-import { getNickname, getSeat, saveNickname } from './seat';
+import { hostColour } from './api';
+import { getColour, getNickname, getSeat, saveColour, saveNickname } from './seat';
+import { ColourPicker } from './components/ColourPicker';
+import type { PieceColour } from '@isachess/engine';
 
 function usePath(): [string, (path: string) => void] {
   const [path, setPath] = useState(location.pathname);
@@ -21,17 +24,26 @@ function usePath(): [string, (path: string) => void] {
   return [path, go];
 }
 
-function NicknamePrompt({ onDone }: { onDone: (nick: string) => void }) {
+function NicknamePrompt({ gameId, onDone }: { gameId: string; onDone: (nick: string, colour: PieceColour) => void }) {
   const [nick, setNick] = useState(getNickname());
+  const [colour, setColour] = useState(getColour());
+  const [taken, setTaken] = useState<PieceColour | undefined>();
+  useEffect(() => {
+    void hostColour(gameId).then((c) => {
+      setTaken(c);
+      if (c) setColour((mine) => (mine === c ? (c === 'black' ? 'white' : 'black') : mine));
+    });
+  }, [gameId]);
   return (
     <main className="home">
       <Brand />
       <p className="tagline">You've been invited to a game.</p>
-      <form onSubmit={(e) => { e.preventDefault(); if (nick.trim()) onDone(nick.trim()); }}>
+      <form onSubmit={(e) => { e.preventDefault(); if (nick.trim()) onDone(nick.trim(), colour); }}>
         <label>
           Your nickname
           <input value={nick} maxLength={20} autoFocus onChange={(e) => setNick(e.target.value)} data-testid="nickname" />
         </label>
+        <ColourPicker value={colour} onChange={setColour} taken={taken} />
         <button type="submit" data-testid="join-game">Join game</button>
       </form>
     </main>
@@ -39,16 +51,17 @@ function NicknamePrompt({ onDone }: { onDone: (nick: string) => void }) {
 }
 
 function GameRoute({ gameId, go }: { gameId: string; go: (path: string) => void }) {
-  const [nickname, setNickname] = useState<string | null>(() => (getSeat(gameId) || getNickname() ? getNickname() : null));
+  const [nickname, setNickname] = useState<string | null>(() => (getSeat(gameId) ? getNickname() : null));
+  const [colour, setColour] = useState(getColour());
   const [guide, setGuide] = useState(false);
-  const { conn, send, rematch, chat, me, sendChat, lastError, errorKey, clearError } = useGame(gameId, nickname);
+  const { conn, send, rematch, chat, me, sendChat, lastError, errorKey, clearError } = useGame(gameId, nickname, colour);
 
   useEffect(() => {
     if (conn.status === 'gone' && conn.reason === 'not-found') go('/?note=gone');
   }, [conn, go]);
 
   if (nickname === null) {
-    return <NicknamePrompt onDone={(n) => { saveNickname(n); setNickname(n); }} />;
+    return <NicknamePrompt gameId={gameId} onDone={(n, c) => { saveNickname(n); saveColour(c); setColour(c); setNickname(n); }} />;
   }
   switch (conn.status) {
     case 'connecting':

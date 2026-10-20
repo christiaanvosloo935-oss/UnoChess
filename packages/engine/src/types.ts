@@ -86,8 +86,14 @@ export type EffectArgs =
   | { type: 'shapeshift'; pieceId: string; as: PieceType; to: Square; promotion?: PromotionType }
   | { type: 'revive'; capturedIndex: number; square: Square; asQueen?: boolean };
 
+/** What a Joker (the 0 card) turns into when played. Never another Joker. */
+export interface JokerChoice {
+  kind: CardKind;
+  value?: number; // 1-9, only for 'num'
+}
+
 export type Action =
-  | { type: 'playCard'; cardId: string; asOne?: boolean; args?: EffectArgs }
+  | { type: 'playCard'; cardId: string; asOne?: boolean; joker?: JokerChoice; args?: EffectArgs }
   | { type: 'move'; from: Square; to: Square; promotion?: PromotionType }
   | { type: 'doneMoving' }
   | { type: 'resign' };

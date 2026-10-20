@@ -35,3 +35,6 @@ export function stateFrom(
 }
 
 export const sq = (name: string) => (Number(name[1]) - 1) * 8 + (name.charCodeAt(0) - 97);
+
+/** A card that does nothing when played: a Revive with nothing captured. */
+export const rest = () => card('wild');

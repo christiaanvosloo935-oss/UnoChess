@@ -1,11 +1,11 @@
 import {
-  legalFreezeTargets, legalRevives, legalShapeshifts, legalShieldTargets, legalSwaps, playableCards,
+  legalFreezeTargets, legalJokerChoices, legalRevives, legalShapeshifts, legalShieldTargets, legalSwaps, playableCards,
   type PlayableCard, type ReviveOption, type ShapeshiftOption,
 } from './cards.js';
 import { isInCheck, legalMoves } from './chess.js';
 import { armyOf, ctxFor, opponentOf } from './state.js';
 import type {
-  Army, Card, ChessState, Effects, GameEvent, GameState, Move, Phase, PlayerId,
+  Army, Card, ChessState, Effects, GameEvent, GameState, JokerChoice, Move, Phase, PlayerId,
 } from './types.js';
 
 export interface LegalOptions {
@@ -17,6 +17,7 @@ export interface LegalOptions {
   shieldTargets: string[];
   shapeshifts: ShapeshiftOption[];
   revives: ReviveOption[];
+  jokerChoices: JokerChoice[]; // what a Joker in hand may become right now
 }
 
 export interface PlayerView {
@@ -28,6 +29,7 @@ export interface PlayerView {
   effects: Effects;
   hand: Card[];
   opponentHandCount: number;
+  opponentHand: Card[] | null; // revealed only to the player who has been checkmated
   drawPileCount: number;
   topDiscard: Card | null;
   current: PlayerId;
@@ -43,7 +45,7 @@ const LOG_LIMIT = 50;
 function emptyOptions(): LegalOptions {
   return {
     cards: [], moves: [], canDoneMoving: false, swaps: [], freezeTargets: [], shieldTargets: [],
-    shapeshifts: [], revives: [],
+    shapeshifts: [], revives: [], jokerChoices: [],
   };
 }
 
@@ -67,6 +69,7 @@ export function legalOptions(state: GameState, player: PlayerId): LegalOptions {
       shieldTargets: legalShieldTargets(state, player),
       shapeshifts: legalShapeshifts(state, player),
       revives: legalRevives(state, player),
+      jokerChoices: legalJokerChoices(state, player),
     };
   }
   return emptyOptions();
@@ -76,6 +79,7 @@ export function legalOptions(state: GameState, player: PlayerId): LegalOptions {
 export function viewFor(state: GameState, player: PlayerId): PlayerView {
   const opponent = opponentOf(state, player);
   const toMoveArmy = armyOf(state, state.current);
+  const checkmated = state.phase.kind === 'over' && state.phase.reason === 'checkmate' && state.phase.winner !== player;
   return {
     you: player,
     opponent,
@@ -85,6 +89,7 @@ export function viewFor(state: GameState, player: PlayerId): PlayerView {
     effects: state.effects,
     hand: state.hands[player],
     opponentHandCount: state.hands[opponent].length,
+    opponentHand: checkmated ? state.hands[opponent] : null,
     drawPileCount: state.drawPile.length,
     topDiscard: state.discardPile.length > 0 ? state.discardPile[state.discardPile.length - 1] : null,
     current: state.current,

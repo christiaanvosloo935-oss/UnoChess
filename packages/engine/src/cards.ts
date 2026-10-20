@@ -1,6 +1,6 @@
 import { isInCheck, movesAs, revokeCastling } from './chess.js';
 import { armyOf, ctxFor as ctxForArmy, inCheckNow, opponentOf } from './state.js';
-import type { Army, Card, ChessState, GameState, PieceType, PlayerId, PromotionType, Square } from './types.js';
+import type { Army, Card, ChessState, GameState, JokerChoice, PieceType, PlayerId, PromotionType, Square } from './types.js';
 
 export interface PlayableCard {
   cardId: string;
@@ -108,6 +108,32 @@ export function legalRevives(state: GameState, player: PlayerId): ReviveOption[]
 
 const range = (from: number, to: number) => Array.from({ length: to - from }, (_, i) => from + i);
 
+export const isJoker = (card: Card): boolean => card.kind === 'num' && card.value === 0;
+
+/** The card a Joker stands in for while its effect resolves. */
+export function asChoice(card: Card, choice: JokerChoice): Card {
+  const out: Card = { ...card, kind: choice.kind };
+  if (choice.value !== undefined) out.value = choice.value;
+  else delete out.value;
+  return out;
+}
+
+const JOKER_CHOICES: JokerChoice[] = [
+  ...Array.from({ length: 9 }, (_, i) => ({ kind: 'num' as const, value: i + 1 })),
+  { kind: 'skip' }, { kind: 'reverse' }, { kind: 'draw2' }, { kind: 'wild' }, { kind: 'wild4' },
+];
+
+export const isJokerChoice = (c: JokerChoice | undefined): c is JokerChoice =>
+  !!c && JOKER_CHOICES.some((o) => o.kind === c.kind && o.value === c.value);
+
+/** What the player's Joker may become right now. In check, only cards that escape it. */
+export function legalJokerChoices(state: GameState, player: PlayerId): JokerChoice[] {
+  const joker = state.hands[player].find(isJoker);
+  if (!joker || state.phase.kind !== 'awaitingCard' || state.current !== player) return [];
+  if (!inCheckNow(state)) return JOKER_CHOICES;
+  return JOKER_CHOICES.filter((c) => escapesCheck(state, player, asChoice(joker, c)));
+}
+
 function escapesCheck(state: GameState, player: PlayerId, card: Card): boolean {
   if (card.kind === 'wild') return legalRevives(state, player).length > 0;
   if (card.kind !== 'num') return false;
@@ -123,7 +149,7 @@ export function playableCards(state: GameState, player: PlayerId): PlayableCard[
   const inCheck = inCheckNow(state);
   return state.hands[player].map((card) => ({
     cardId: card.id,
-    asEffect: !inCheck || escapesCheck(state, player, card),
+    asEffect: !inCheck || (isJoker(card) ? legalJokerChoices(state, player).length > 0 : escapesCheck(state, player, card)),
     asOne: inCheck,
   }));
 }

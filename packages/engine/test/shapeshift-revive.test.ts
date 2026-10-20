@@ -3,7 +3,7 @@ import {
   START_FEN, apply, legalShapeshifts, legalRevives, playableCards,
   type Action, type EffectArgs, type GameState,
 } from '../src/index.js';
-import { card, num, sq, stateFrom } from './helpers.js';
+import { card, num, rest, sq, stateFrom } from './helpers.js';
 
 function ok(state: GameState, player: string, action: Action): GameState {
   const r = apply(state, player, action);
@@ -36,7 +36,7 @@ describe('8 · Shapeshift', () => {
   it('the piece is itself again on the next turn', () => {
     const eight = num(8);
     const one = num(1);
-    const zero = num(0);
+    const zero = rest();
     let s = stateFrom(START_FEN, { w: [eight, one], b: [zero] });
     s = ok(s, 'A', play(eight, shape(s, 'c1', 'n', 'b3')));
     s = ok(s, 'B', play(zero));
