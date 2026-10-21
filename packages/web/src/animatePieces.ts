@@ -1,4 +1,5 @@
-import type { Piece } from '@isachess/engine';
+import type { Army, Piece, PieceColour } from '@isachess/engine';
+import { pieceSrc } from './pieceColours';
 import type { BoardDiff } from './animation';
 
 const SLIDE_MS = 260;
@@ -22,6 +23,7 @@ export function playTransition(
   root: HTMLElement,
   diff: BoardDiff,
   effects: { frozen: string[]; shielded: string[] },
+  colours?: Record<Army, PieceColour>,
 ): void {
   const moved = new Set<string>();
   for (const m of diff.moves) {
@@ -54,7 +56,7 @@ export function playTransition(
     }
   }
 
-  for (const { piece, square } of diff.captured) addGhost(root, piece, square);
+  for (const { piece, square } of diff.captured) addGhost(root, piece, square, colours?.[piece.army]);
 
   for (const { id } of diff.appeared) {
     const el = pieceEl(root, id);
@@ -92,12 +94,12 @@ export function playTransition(
 }
 
 /** A captured piece lingers on its square, then fades as the capturer arrives. */
-function addGhost(root: HTMLElement, piece: Piece, square: number): void {
+function addGhost(root: HTMLElement, piece: Piece, square: number, colour?: PieceColour): void {
   const host = sqEl(root, square);
   if (!host) return;
   const ghost = document.createElement('img');
   ghost.className = 'piece-img ghost';
-  ghost.src = `/pieces/${piece.army}${piece.type.toUpperCase()}.svg`;
+  ghost.src = pieceSrc(piece.army, piece.type, colour);
   ghost.alt = '';
   ghost.setAttribute('aria-hidden', 'true');
   host.appendChild(ghost);

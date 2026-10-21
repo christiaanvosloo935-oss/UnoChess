@@ -1,7 +1,7 @@
 import { randomBytes, randomInt, randomUUID, timingSafeEqual } from 'node:crypto';
 import {
-  apply, createGame, geometryFor, viewFor,
-  type Action, type ChatMessage, type GameState, type PlayerId, type RoomInfo, type ServerMessage, type Variant,
+  PIECE_COLOURS, apply, createGame, geometryFor, viewFor,
+  type Action, type ChatMessage, type GameState, type PieceColour, type PlayerId, type RoomInfo, type ServerMessage, type Variant,
 } from '@isachess/engine';
 
 const ID_CHARS = 'abcdefghjkmnpqrstuvwxyz23456789';
@@ -13,6 +13,7 @@ export interface Seat {
   playerId: PlayerId;
   token: string;
   nickname: string;
+  colour: PieceColour;
 }
 
 export interface Room {
@@ -47,6 +48,17 @@ function cleanName(raw: string): string {
   return raw.trim().slice(0, 20) || 'Player';
 }
 
+export function parseColour(raw: unknown): PieceColour | undefined {
+  return PIECE_COLOURS.find((c) => c === raw);
+}
+
+/** The wanted colour, unless another player already has it: then black, white, or the first colour nobody has. */
+function freeColour(wanted: PieceColour | undefined, taken: PieceColour[]): PieceColour {
+  const want = wanted ?? 'black';
+  if (!taken.includes(want)) return want;
+  return (['black', 'white', ...PIECE_COLOURS] as PieceColour[]).find((c) => !taken.includes(c))!;
+}
+
 export class Rooms {
   private rooms = new Map<string, Room>();
   private listeners = new Set<(gameId: string) => void>();
@@ -71,16 +83,16 @@ export class Rooms {
     return this.rooms.get(gameId);
   }
 
-  private newSeat(nickname: string): Seat {
-    return { playerId: randomUUID(), token: randomBytes(24).toString('base64url'), nickname: cleanName(nickname) };
+  private newSeat(nickname: string, colour: PieceColour): Seat {
+    return { playerId: randomUUID(), token: randomBytes(24).toString('base64url'), nickname: cleanName(nickname), colour };
   }
 
-  create(nickname: string, variant: Variant = 'classic'): { gameId: string; seatToken: string; playerId: PlayerId } {
+  create(nickname: string, variant: Variant = 'classic', colour?: PieceColour): { gameId: string; seatToken: string; playerId: PlayerId } {
     let gameId: string;
     do {
       gameId = Array.from({ length: 6 }, () => ID_CHARS[randomInt(ID_CHARS.length)]).join('');
     } while (this.rooms.has(gameId));
-    const seat = this.newSeat(nickname);
+    const seat = this.newSeat(nickname, colour ?? 'white');
     this.rooms.set(gameId, {
       id: gameId,
       variant,
@@ -98,6 +110,7 @@ export class Rooms {
     gameId: string,
     nickname: string,
     seatToken?: string,
+    colour?: PieceColour,
   ): { ok: true; playerId: PlayerId; seatToken: string } | { ok: false; reason: 'not-found' | 'full' } {
     const room = this.rooms.get(gameId);
     if (!room) return { ok: false, reason: 'not-found' };
@@ -105,13 +118,18 @@ export class Rooms {
     const existing = seatToken ? room.seats.find((s) => sameToken(s.token, seatToken)) : undefined;
     if (existing) return { ok: true, playerId: existing.playerId, seatToken: existing.token };
     if (room.seats.length >= room.capacity) return { ok: false, reason: 'full' };
-    const seat = this.newSeat(nickname);
+    const seat = this.newSeat(nickname, freeColour(colour, room.seats.map((x) => x.colour)));
     room.seats.push(seat);
     if (room.seats.length === room.capacity) {
       room.state = createGame(this.seed(), room.seats.map((s) => s.playerId), room.variant);
     }
     this.emit(gameId);
     return { ok: true, playerId: seat.playerId, seatToken: seat.token };
+  }
+
+  /** The colours already picked in a game, so a newcomer's picker can mark them as taken. */
+  takenColours(gameId: string): PieceColour[] | undefined {
+    return this.rooms.get(gameId)?.seats.map((x) => x.colour);
   }
 
   attach(gameId: string, playerId: PlayerId): void {
@@ -186,9 +204,10 @@ export class Rooms {
   snapshot(gameId: string, playerId: PlayerId): ServerMessage | null {
     const room = this.rooms.get(gameId);
     if (!room) return null;
-    if (!room.state) return { type: 'lobby', gameId, names: room.seats.map((s) => s.nickname), needed: room.capacity - room.seats.length };
+    if (!room.state) return { type: 'lobby', gameId, names: room.seats.map((s) => s.nickname), colours: room.seats.map((s) => s.colour), needed: room.capacity - room.seats.length };
     const info: RoomInfo = {
       names: Object.fromEntries(room.seats.map((s) => [s.playerId, s.nickname])),
+      colours: Object.fromEntries(room.seats.map((s) => [s.playerId, s.colour])),
       connected: Object.fromEntries(room.state.players.map((p) => [p, (room.connections[p] ?? 0) > 0])),
       rematch: Object.fromEntries(room.state.players.map((p) => [p, room.rematchVotes.has(p)])),
     };

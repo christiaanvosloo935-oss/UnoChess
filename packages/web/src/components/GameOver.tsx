@@ -1,4 +1,5 @@
 import type { PlayerView, RoomInfo } from '@isachess/engine';
+import { CardView } from './CardView';
 
 export function GameOver({ view, room, onRematch }: { view: PlayerView; room: RoomInfo; onRematch: () => void }) {
   if (view.phase.kind !== 'over') return null;
@@ -15,6 +16,18 @@ export function GameOver({ view, room, onRematch }: { view: PlayerView; room: Ro
       <div className="modal" role="dialog" aria-label="Game over">
         <h2 data-testid="result">{title}</h2>
         <p>{why}</p>
+        {view.opponents.some((o) => o.hand) && (
+          <div className="revealed" data-testid="revealed-hand">
+            {view.opponents.filter((o) => o.hand && o.hand.length > 0).map((o) => (
+              <div key={o.id} className="revealed-hand">
+                <span className="muted">{room.names[o.id] ?? 'Your opponent'} was holding</span>
+                <div className="revealed-cards">
+                  {o.hand!.map((c) => <CardView key={c.id} card={c} disabled small />)}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
         {!three && room.rematch[view.opponents[0].id] && !iVoted && <p>Your opponent wants a rematch.</p>}
         {three && voted.length > 0 && (
           <p data-testid="rematch-votes">Rematch: {voted.map((id) => (id === view.you ? 'You' : room.names[id] ?? 'Player')).join(', ')}</p>

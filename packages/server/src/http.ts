@@ -2,7 +2,7 @@ import { existsSync, statSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { extname, join, normalize, resolve, sep } from 'node:path';
-import type { Rooms } from './rooms.js';
+import { parseColour, type Rooms } from './rooms.js';
 
 const MIME: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',
@@ -43,8 +43,9 @@ function json(res: ServerResponse, status: number, payload: unknown): void {
 async function createGame(req: IncomingMessage, res: ServerResponse, rooms: Rooms): Promise<void> {
   let nickname: unknown;
   let variant: unknown;
+  let colour: unknown;
   try {
-    ({ nickname, variant } = JSON.parse(await readBody(req)) as { nickname?: unknown; variant?: unknown });
+    ({ nickname, variant, colour } = JSON.parse(await readBody(req)) as { nickname?: unknown; variant?: unknown; colour?: unknown });
   } catch {
     return json(res, 400, { error: 'Bad request' });
   }
@@ -54,7 +55,7 @@ async function createGame(req: IncomingMessage, res: ServerResponse, rooms: Room
   if (variant !== undefined && variant !== 'classic' && variant !== 'three') {
     return json(res, 400, { error: "Variant must be 'classic' or 'three'." });
   }
-  json(res, 200, rooms.create(nickname, variant ?? 'classic'));
+  json(res, 200, rooms.create(nickname, variant ?? 'classic', parseColour(colour)));
 }
 
 async function serveStatic(staticDir: string, pathname: string, res: ServerResponse): Promise<void> {
@@ -90,6 +91,11 @@ export function handleHttp(rooms: Rooms, staticDir?: string) {
     }
     const run = async () => {
       if (req.method === 'POST' && pathname === '/api/games') return createGame(req, res, rooms);
+      const game = /^\/api\/games\/([a-z0-9]+)$/i.exec(pathname);
+      if (req.method === 'GET' && game) {
+        const colours = rooms.takenColours(game[1]);
+        return colours ? json(res, 200, { colours }) : json(res, 404, { error: 'Not found' });
+      }
       if (req.method === 'GET' && staticDir && !pathname.startsWith('/api/')) return serveStatic(staticDir, pathname, res);
       res.writeHead(404);
       res.end('Not found');

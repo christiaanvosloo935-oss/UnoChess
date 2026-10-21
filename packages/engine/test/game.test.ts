@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { START_FEN, createGame, apply, type Action, type GameState } from '../src/index.js';
-import { card, num, sq, stateFrom } from './helpers.js';
+import { START_FEN, createGame, apply, type Action, type Card, type GameState } from '../src/index.js';
+import { card, num, sq, stateFrom, rest } from './helpers.js';
 
 function ok(state: GameState, player: string, action: Action): GameState {
   const r = apply(state, player, action);
@@ -35,16 +35,65 @@ describe('createGame', () => {
   });
 });
 
-describe('0 card', () => {
-  it('passes, draws back to 7, hands the turn over', () => {
-    const zero = num(0);
-    const s = stateFrom(START_FEN, { w: [zero, ...Array.from({ length: 5 }, () => num(3))] });
-    const after = ok(s, 'A', play(zero));
+describe('Joker (0 card)', () => {
+  const as = (kind: Card['kind'], value?: number): Partial<Extract<Action, { type: 'playCard' }>> => ({
+    joker: value === undefined ? { kind } : { kind, value },
+  });
+
+  it('a card that does nothing still draws back to 7 and hands the turn over', () => {
+    const pass = rest();
+    const s = stateFrom(START_FEN, { w: [pass, ...Array.from({ length: 5 }, () => num(3))] });
+    const after = ok(s, 'A', play(pass));
     expect(after.hands.A).toHaveLength(7);
     expect(after.current).toBe('B');
     expect(after.turn).toBe(2);
-    expect(after.phase).toEqual({ kind: 'awaitingCard' });
-    expect(after.discardPile.at(-1)).toEqual(zero);
+    expect(after.discardPile.at(-1)).toEqual(pass);
+  });
+
+  it('becomes a move card: a Joker as a 3 gives three moves', () => {
+    const joker = num(0);
+    let s = stateFrom(START_FEN, { w: [joker] });
+    s = ok(s, 'A', play(joker, as('num', 3)));
+    expect(s.phase).toMatchObject({ kind: 'moving', movesLeft: 3 });
+    expect(s.log.at(-1)!.text).toBe('played Joker as 3');
+    expect(s.discardPile.at(-1)).toEqual(joker);
+  });
+
+  it('becomes Switch sides', () => {
+    const joker = num(0);
+    const after = ok(stateFrom(START_FEN, { w: [joker] }), 'A', play(joker, as('reverse')));
+    expect(after.seats).toEqual({ w: 'B', b: 'A' });
+    expect(after.current).toBe('B');
+  });
+
+  it('becomes a targeted effect and takes its args', () => {
+    const joker = num(0);
+    const s = stateFrom(START_FEN, { w: [joker] });
+    const target = s.chess.board[sq('e7')]!.id;
+    expect(fail(s, 'A', play(joker, as('num', 7)))).toMatch(/freeze/i);
+    const after = ok(s, 'A', play(joker, { ...as('num', 7), args: { type: 'freeze', pieceId: target } }));
+    expect(after.effects.frozen).toEqual([{ pieceId: target, army: 'b' }]);
+  });
+
+  it('becomes Draw four: the player draws the extra cards', () => {
+    const joker = num(0);
+    const s = stateFrom(START_FEN, { w: [joker], b: [num(1)] });
+    const after = ok(s, 'A', play(joker, as('wild4')));
+    expect(after.log.some((e) => e.text === 'drew 4 extra cards')).toBe(true);
+  });
+
+  it('must say what it becomes, and cannot become another Joker', () => {
+    const joker = num(0);
+    const s = stateFrom(START_FEN, { w: [joker] });
+    expect(fail(s, 'A', play(joker))).toMatch(/Joker/);
+    expect(fail(s, 'A', play(joker, as('num', 0)))).toMatch(/Joker/);
+    expect(fail(s, 'A', play(joker, as('num', 12)))).toMatch(/Joker/);
+  });
+
+  it('a normal card ignores any joker field', () => {
+    const three = num(3);
+    const s = ok(stateFrom(START_FEN, { w: [three] }), 'A', play(three, as('wild4')));
+    expect(s.phase).toMatchObject({ kind: 'moving', movesLeft: 3 });
   });
 });
 
@@ -104,8 +153,8 @@ describe('move cards', () => {
 
 describe('check handling (rule C, §5.3)', () => {
   const FEN = '4r1k1/8/8/8/8/8/8/4K3 w - - 0 1';
-  it('in check, a 0 can only be played as a 1', () => {
-    const z = num(0);
+  it('in check, a plain card can only be played as a 1', () => {
+    const z = rest();
     const s = stateFrom(FEN, { w: [z] });
     expect(fail(s, 'A', play(z))).toMatch(/in check/);
     const after = ok(s, 'A', play(z, { asOne: true }));
@@ -114,8 +163,16 @@ describe('check handling (rule C, §5.3)', () => {
     const escaped = ok(after, 'A', mv('e1', 'd1'));
     expect(escaped.phase).toEqual({ kind: 'awaitingCard' });
   });
+  it('in check, a Joker may only become a card that escapes', () => {
+    const j = num(0);
+    const s = stateFrom(FEN, { w: [j] });
+    expect(fail(s, 'A', play(j, { joker: { kind: 'wild4' } }))).toMatch(/escapes check/);
+    expect(fail(s, 'A', play(j, { joker: { kind: 'reverse' } }))).toMatch(/escapes check/);
+    expect(ok(s, 'A', play(j, { joker: { kind: 'num', value: 2 } })).phase).toMatchObject({ kind: 'moving', movesLeft: 2, mustMove: true });
+    expect(ok(s, 'A', play(j, { asOne: true })).phase).toMatchObject({ kind: 'moving', movesLeft: 1 });
+  });
   it('asOne is refused when not in check', () => {
-    const z = num(0);
+    const z = rest();
     const s = stateFrom(START_FEN, { w: [z] });
     expect(fail(s, 'A', play(z, { asOne: true }))).toMatch(/in check/);
   });
@@ -158,7 +215,7 @@ describe('game end', () => {
   });
 
   it('stalemate ignores freezes', () => {
-    const z = num(0);
+    const z = rest();
     const base = stateFrom('7k/8/8/8/8/p7/P7/K7 b - - 0 1', { b: [z] });
     const king = base.chess.board[sq('a1')]!.id;
     const s = stateFrom('7k/8/8/8/8/p7/P7/K7 b - - 0 1', { b: [z] }, { effects: { frozen: [{ pieceId: king, army: 'w' }], shields: [] } });
@@ -177,7 +234,7 @@ describe('special chess moves', () => {
   it('en passant works on the immediately following turn only', () => {
     const w = num(1);
     const b1 = num(1);
-    let s = stateFrom('4k3/8/8/8/3p4/8/4P3/4K3 w - - 0 1', { w: [w], b: [b1, num(0)] });
+    let s = stateFrom('4k3/8/8/8/3p4/8/4P3/4K3 w - - 0 1', { w: [w], b: [b1, rest()] });
     s = ok(ok(s, 'A', play(w)), 'A', mv('e2', 'e4'));
     expect(s.chess.ep).toMatchObject({ square: sq('e3'), capturer: 'b' });
     const taken = ok(ok(s, 'B', play(b1)), 'B', mv('d4', 'e3'));
@@ -219,8 +276,8 @@ describe('stale and out-of-turn actions', () => {
 
 describe('draw step', () => {
   it('does not draw when the hand still has 7 or more cards', () => {
-    const hand = Array.from({ length: 8 }, () => num(0));
-    const s = stateFrom(START_FEN, { w: hand, b: Array.from({ length: 7 }, () => num(0)) });
+    const hand = Array.from({ length: 8 }, () => rest());
+    const s = stateFrom(START_FEN, { w: hand, b: Array.from({ length: 7 }, () => rest()) });
     const after = ok(s, 'A', play(hand[0]));
     expect(after.hands.A).toHaveLength(7);
     expect(after.drawPile).toHaveLength(20);

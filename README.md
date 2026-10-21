@@ -25,7 +25,7 @@ The house rules are in `docs/superpowers/specs/2026-10-13-isachess-online-design
 |---|---|
 | `packages/engine` | Pure rules: chess, every card, turn flow, what each player is allowed to see. No network, no UI. |
 | `packages/server` | Node + WebSockets. Holds live games in memory and checks every action with the engine; each player is sent only their own hand. |
-| `packages/web` | The React website: home page, board, hand, card prompts. |
+| `packages/web` | The React website: home page, board, hand, card prompts. `npm run tint-pieces -w @isachess/web` regenerates the coloured piece sets. |
 
 ## Run it on your computer
 

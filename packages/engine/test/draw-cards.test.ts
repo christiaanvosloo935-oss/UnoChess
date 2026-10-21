@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { apply, START_FEN, type Action, type GameState } from '../src/index.js';
-import { card, hexState, num, stateFrom } from './helpers.js';
+import { card, hexState, num, stateFrom, rest } from './helpers.js';
 
 const play = (c: { id: string }): Action => ({ type: 'playCard', cardId: c.id });
 function ok(s: GameState, player: string, a: Action): GameState {
@@ -8,7 +8,7 @@ function ok(s: GameState, player: string, a: Action): GameState {
   if (!r.ok) throw new Error(r.error);
   return r.state;
 }
-const zeros = (n: number) => Array.from({ length: n }, () => num(0));
+const zeros = (n: number) => Array.from({ length: n }, () => rest());
 const K: Parameters<typeof hexState>[0]['pieces'] = [['w', 'k', 'w.e1'], ['r', 'k', 'r.e1'], ['b', 'k', 'b.e1']];
 
 describe('+2 and +4 give the cards to the player who plays them', () => {

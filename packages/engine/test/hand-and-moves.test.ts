@@ -3,7 +3,7 @@ import {
   apply, buildDeck, exhaustedPieces, viewFor, MAX_MOVES_PER_PIECE, START_FEN,
   type Action, type GameState,
 } from '../src/index.js';
-import { card, hexState, num, sq, stateFrom } from './helpers.js';
+import { card, hexState, num, sq, stateFrom, rest } from './helpers.js';
 
 const play = (c: { id: string }): Action => ({ type: 'playCard', cardId: c.id });
 const mv = (from: string, to: string): Action => ({ type: 'move', from: sq(from), to: sq(to) });
@@ -17,7 +17,7 @@ function fail(s: GameState, player: string, a: Action): string {
   if (r.ok) throw new Error('expected a failure');
   return r.error;
 }
-const zeros = (n: number) => Array.from({ length: n }, () => num(0));
+const zeros = (n: number) => Array.from({ length: n }, () => rest());
 
 describe('players are topped up to 7 cards', () => {
   it('after a card the player draws up to 7, not just one card', () => {

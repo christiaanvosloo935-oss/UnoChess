@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { apply, createGame, isInCheck, nextPlayer, armyOf, activePlayers, opponentsOf, type Action, type GameState } from '../src/index.js';
-import { card, hexState, num } from './helpers.js';
+import { card, hexState, num, rest } from './helpers.js';
 
 const K: [import('../src/index.js').Army, import('../src/index.js').PieceType, string][] = [
   ['w', 'k', 'w.e1'], ['r', 'k', 'r.e1'], ['b', 'k', 'b.e1'],
@@ -30,7 +30,7 @@ describe('createGame for three', () => {
 
 describe('turn order', () => {
   it('is clockwise', () => {
-    let s = hexState({ pieces: K, hands: { A: [num(0)], B: [num(0)], C: [num(0)] } });
+    let s = hexState({ pieces: K, hands: { A: [rest()], B: [rest()], C: [rest()] } });
     s = ok(s, 'A', play(s.hands.A[0]));
     expect(s.current).toBe('B');
     s = ok(s, 'B', play(s.hands.B[0]));
@@ -108,12 +108,12 @@ describe('moving on the three-player board', () => {
   });
 });
 
-const seven = () => Array.from({ length: 7 }, () => num(0));
+const seven = () => Array.from({ length: 7 }, () => rest());
 
 describe('targeted cards', () => {
   it('Trade Hands needs a target with two opponents', () => {
     const nine = num(9);
-    const s = hexState({ pieces: K, hands: { A: [nine, num(0)], B: seven(), C: seven() } });
+    const s = hexState({ pieces: K, hands: { A: [nine, rest()], B: seven(), C: seven() } });
     expect(apply(s, 'A', play(nine))).toEqual({ ok: false, error: 'Choose which opponent.' });
     const after = ok(s, 'A', play(nine, { target: 'C' }));
     expect(after.current).toBe('B');
@@ -130,7 +130,7 @@ describe('targeted cards', () => {
     const nine = num(9);
     const hb = [num(1), num(2)];
     const hc = [num(3)];
-    const zeroCard = num(0);
+    const zeroCard = rest();
     let s = hexState({ pieces: K, hands: { A: [nine, zeroCard], B: hb, C: hc } });
     s = ok(s, 'A', play(nine, { target: 'C' }));
     expect(s.hands.B.slice(0, 2)).toEqual(hb); // B kept its own cards (and was topped up to 7)
@@ -140,15 +140,15 @@ describe('targeted cards', () => {
   });
   it('Switch Sides swaps armies between the player and the target only', () => {
     const rev = card('reverse');
-    let s = hexState({ pieces: K, hands: { A: [rev, num(0)] } });
+    let s = hexState({ pieces: K, hands: { A: [rev, rest()] } });
     s = ok(s, 'A', play(rev, { target: 'C' }));
     expect(s.seats).toEqual({ w: 'C', r: 'B', b: 'A' });
   });
   it('refuses a target who is eliminated or is yourself', () => {
     const rev = card('reverse');
-    const s = { ...hexState({ pieces: K, hands: { A: [rev, num(0)] } }), eliminated: ['B'] };
+    const s = { ...hexState({ pieces: K, hands: { A: [rev, rest()] } }), eliminated: ['B'] };
     expect(apply(s, 'A', play(rev, { target: 'B' }))).toEqual({ ok: false, error: "You can't choose that player." });
-    const t = hexState({ pieces: K, hands: { A: [rev, num(0)] } });
+    const t = hexState({ pieces: K, hands: { A: [rev, rest()] } });
     expect(apply(t, 'A', play(rev, { target: 'A' }))).toEqual({ ok: false, error: "You can't choose that player." });
     // with one active opponent left the target is filled in
     const r = apply(s, 'A', play(rev));
@@ -168,8 +168,26 @@ describe('targeted cards', () => {
   it('names the chosen seat in the log', () => {
     const nine = num(9);
     const rev = card('reverse');
-    const s = hexState({ pieces: K, hands: { A: [nine, rev, num(0)] } });
+    const s = hexState({ pieces: K, hands: { A: [nine, rev, rest()] } });
     expect(ok(s, 'A', play(nine, { target: 'B' })).log.map((e) => e.text)).toContain('traded hands with Red');
     expect(ok(s, 'A', play(rev, { target: 'C' })).log.map((e) => e.text)).toContain('switched sides with Black');
+  });
+});
+
+describe('Joker in a three-player game', () => {
+  it('becomes Switch sides and needs a target like the real card', () => {
+    const joker = num(0);
+    const s = hexState({ pieces: K, hands: { A: [joker, rest()] } });
+    expect(apply(s, 'A', play(joker, { joker: { kind: 'reverse' } }))).toEqual({ ok: false, error: 'Choose which opponent.' });
+    const after = ok(s, 'A', play(joker, { joker: { kind: 'reverse' }, target: 'C' }));
+    expect(after.seats).toEqual({ w: 'C', r: 'B', b: 'A' });
+  });
+
+  it('becomes Trade Hands with the chosen opponent', () => {
+    const joker = num(0);
+    const hc = [num(3)];
+    const s = hexState({ pieces: K, hands: { A: [joker, rest()], C: hc } });
+    const after = ok(s, 'A', play(joker, { joker: { kind: 'num', value: 9 }, target: 'C' }));
+    expect(after.hands.A.map((c) => c.id)).toContain(hc[0].id);
   });
 });

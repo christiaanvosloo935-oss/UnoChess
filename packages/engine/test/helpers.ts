@@ -33,7 +33,7 @@ export function stateFrom(
     variant: 'classic',
     seats: { w: 'A', b: 'B' },
     eliminated: [],
-    hands: { A: hands.w ?? [num(0)], B: hands.b ?? [num(0)] },
+    hands: { A: hands.w ?? [rest()], B: hands.b ?? [rest()] },
     drawPile: Array.from({ length: 20 }, (_, i) => filler(`d${i}`)),
     discardPile: [],
     seed: 1,
@@ -94,7 +94,7 @@ export function hexState(opts: {
     players: ['A', 'B', 'C'],
     seats: { w: 'A', r: 'B', b: 'C' },
     eliminated: [],
-    hands: { A: [num(0)], B: [num(0)], C: [num(0)], ...opts.hands },
+    hands: { A: [rest()], B: [rest()], C: [rest()], ...opts.hands },
     drawPile: Array.from({ length: 30 }, (_, i) => filler(`d${i}`)),
     discardPile: [],
     seed: 1,
@@ -106,3 +106,6 @@ export function hexState(opts: {
     log: [],
   };
 }
+
+/** A card that does nothing when played: a Revive with nothing captured. */
+export const rest = () => card('wild');

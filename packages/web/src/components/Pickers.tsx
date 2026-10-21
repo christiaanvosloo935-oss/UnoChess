@@ -1,9 +1,11 @@
-import type { Army, PieceType, PlayerView, PromotionType } from '@isachess/engine';
+import { asChoice, type Army, type Card, type JokerChoice, type PieceColour, type PieceType, type PlayerView, type PromotionType } from '@isachess/engine';
+import { COLOUR_HEX } from '../pieceColours';
+import { CardView } from './CardView';
 import { ARMY_NAME } from './ArmyName';
 import { PIECE_NAME } from './pieceNames';
 import { PieceIcon } from './PieceIcon';
 
-function Modal({ title, children, onCancel }: { title: string; children: React.ReactNode; onCancel: () => void }) {
+export function Modal({ title, children, onCancel }: { title: string; children: React.ReactNode; onCancel: () => void }) {
   return (
     <div className="modal-backdrop">
       <div className="modal" role="dialog" aria-label={title}>
@@ -15,12 +17,12 @@ function Modal({ title, children, onCancel }: { title: string; children: React.R
   );
 }
 
-export function PromotionPicker({ army, onPick, onCancel }: { army: Army; onPick: (p: PromotionType) => void; onCancel: () => void }) {
+export function PromotionPicker({ army, colour, onPick, onCancel }: { army: Army; colour?: PieceColour; onPick: (p: PromotionType) => void; onCancel: () => void }) {
   return (
     <Modal title="Promote to…" onCancel={onCancel}>
       {(['q', 'r', 'b', 'n'] as const).map((p) => (
         <button key={p} type="button" className="choice" onClick={() => onPick(p)} data-testid={`promote-${p}`}>
-          <PieceIcon army={army} type={p} />
+          <PieceIcon army={army} colour={colour} type={p} />
           {PIECE_NAME[p]}
         </button>
       ))}
@@ -28,13 +30,13 @@ export function PromotionPicker({ army, onPick, onCancel }: { army: Army; onPick
   );
 }
 
-export function ShapeshiftPicker({ view, pieceId, onPick, onCancel }: { view: PlayerView; pieceId: string; onPick: (t: PieceType) => void; onCancel: () => void }) {
+export function ShapeshiftPicker({ view, colour, pieceId, onPick, onCancel }: { view: PlayerView; colour?: PieceColour; pieceId: string; onPick: (t: PieceType) => void; onCancel: () => void }) {
   const types = [...new Set(view.options.shapeshifts.filter((s) => s.pieceId === pieceId).map((s) => s.as))];
   return (
     <Modal title="Move like a…" onCancel={onCancel}>
       {types.map((t) => (
         <button key={t} type="button" className="choice" onClick={() => onPick(t)} data-testid={`shape-${t}`}>
-          <PieceIcon army={view.yourArmy} type={t} />
+          <PieceIcon army={view.yourArmy} colour={colour} type={t} />
           {PIECE_NAME[t]}
         </button>
       ))}
@@ -42,7 +44,7 @@ export function ShapeshiftPicker({ view, pieceId, onPick, onCancel }: { view: Pl
   );
 }
 
-export function RevivePicker({ view, onPick, onCancel }: { view: PlayerView; onPick: (index: number, asQueen: boolean) => void; onCancel: () => void }) {
+export function RevivePicker({ view, colour, onPick, onCancel }: { view: PlayerView; colour?: PieceColour; onPick: (index: number, asQueen: boolean) => void; onCancel: () => void }) {
   const seen = new Set<string>();
   const choices = view.options.revives.filter((r) => {
     const key = `${view.captured[view.yourArmy][r.capturedIndex]}:${r.asQueen}`;
@@ -56,7 +58,7 @@ export function RevivePicker({ view, onPick, onCancel }: { view: PlayerView; onP
         const type = r.asQueen ? 'q' : view.captured[view.yourArmy][r.capturedIndex];
         return (
           <button key={`${r.capturedIndex}:${r.asQueen}`} type="button" className="choice" onClick={() => onPick(r.capturedIndex, r.asQueen)} data-testid={`revive-${r.capturedIndex}-${r.asQueen ? 'q' : 'n'}`}>
-            <PieceIcon army={view.yourArmy} type={type} />
+            <PieceIcon army={view.yourArmy} colour={colour} type={type} />
             {r.asQueen ? 'Pawn → Queen' : PIECE_NAME[type]}
           </button>
         );
@@ -65,17 +67,32 @@ export function RevivePicker({ view, onPick, onCancel }: { view: PlayerView; onP
   );
 }
 
-export function TargetPicker({ view, names, onPick, onCancel }: { view: PlayerView; names: Record<string, string>; onPick: (id: string) => void; onCancel: () => void }) {
+export function TargetPicker({ view, names, colours, onPick, onCancel }: { view: PlayerView; names: Record<string, string>; colours: Record<Army, PieceColour>; onPick: (id: string) => void; onCancel: () => void }) {
   const active = view.opponents.filter((o) => view.options.targets.includes(o.id));
   return (
     <Modal title="Which opponent?" onCancel={onCancel}>
       {active.map((o) => (
         <button key={o.id} type="button" className="choice" onClick={() => onPick(o.id)} data-testid={`target-${o.id}`}>
-          <span className={`army-dot army-${o.army}`} aria-hidden="true" />
+          <span className="army-dot" style={{ background: COLOUR_HEX[colours[o.army]] }} aria-hidden="true" />
           {names[o.id] ?? 'Player'}
           <span className="muted">{ARMY_NAME[o.army]}</span>
         </button>
       ))}
+    </Modal>
+  );
+}
+
+export function JokerPicker({ view, card, onPick, onCancel }: { view: PlayerView; card: Card; onPick: (choice: JokerChoice) => void; onCancel: () => void }) {
+  return (
+    <Modal title="Joker: become which card?" onCancel={onCancel}>
+      {view.options.jokerChoices.map((choice) => {
+        const face: Card = {
+          ...asChoice(card, choice),
+          id: `joker-as-${choice.kind}-${choice.value ?? ''}`,
+          colour: choice.kind === 'wild' || choice.kind === 'wild4' ? null : card.colour,
+        };
+        return <CardView key={face.id} card={face} onClick={() => onPick(choice)} />;
+      })}
     </Modal>
   );
 }

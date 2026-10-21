@@ -2,7 +2,7 @@ import type { Card } from '@isachess/engine';
 
 export function cardSymbol(card: Card): string {
   switch (card.kind) {
-    case 'num': return String(card.value);
+    case 'num': return card.value === 0 ? '★' : String(card.value);
     case 'skip': return '⊘';
     case 'reverse': return '⇄';
     case 'draw2': return '+2';
@@ -93,7 +93,7 @@ export function cardName(card: Card): string {
   switch (card.kind) {
     case 'num': {
       const v = card.value!;
-      if (v === 0) return 'Rest';
+      if (v === 0) return 'Joker';
       if (v <= 5) return v === 1 ? '1 move' : `${v} moves`;
       return ['', '', '', '', '', '', 'Swap', 'Freeze', 'Shapeshift', 'Trade hands'][v];
     }

@@ -76,6 +76,7 @@ export interface GameState {
   players: PlayerId[]; // clockwise; the first moves first
   seats: Partial<Record<Army, PlayerId>>;
   eliminated: PlayerId[];
+  checkmated?: PlayerId[]; // eliminated by checkmate (not resignation); they may see everyone's hands
   hands: Record<PlayerId, Card[]>;
   drawPile: Card[];
   discardPile: Card[];
@@ -96,8 +97,14 @@ export type EffectArgs =
   | { type: 'shapeshift'; pieceId: string; as: PieceType; to: Square; promotion?: PromotionType }
   | { type: 'revive'; capturedIndex: number; square: Square; asQueen?: boolean };
 
+/** What a Joker (the 0 card) turns into when played. Never another Joker. */
+export interface JokerChoice {
+  kind: CardKind;
+  value?: number; // 1-9, only for 'num'
+}
+
 export type Action =
-  | { type: 'playCard'; cardId: string; asOne?: boolean; args?: EffectArgs; target?: PlayerId }
+  | { type: 'playCard'; cardId: string; asOne?: boolean; joker?: JokerChoice; args?: EffectArgs; target?: PlayerId }
   | { type: 'move'; from: Square; to: Square; promotion?: PromotionType }
   | { type: 'doneMoving' }
   | { type: 'resign' };

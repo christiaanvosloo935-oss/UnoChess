@@ -1,5 +1,5 @@
 import { useLayoutEffect, useMemo, useRef } from 'react';
-import type { Effects, PlayerView, Square } from '@isachess/engine';
+import type { Army, Effects, PieceColour, PlayerView, Square } from '@isachess/engine';
 import { exhaustedPieces, geometryFor } from '@isachess/engine';
 import { diffBoards, newEffects, shouldAnimate, type BoardMeta } from '../animation';
 import { playTransition, prefersReducedMotion } from '../animatePieces';
@@ -11,13 +11,14 @@ interface Props {
   selectable: Square[];
   targets: Square[];
   selected: Square[];
+  colours: Record<Army, PieceColour>;
   onSquare: (sq: Square) => void;
 }
 
 const pct = (n: number) => `${+n.toFixed(3)}%`;
 
 /** The three-player board: 96 squares drawn as six skewed blocks around the centre (see hexLayout). */
-export function HexBoard({ view, selectable, targets, selected, onSquare }: Props) {
+export function HexBoard({ view, selectable, targets, selected, colours, onSquare }: Props) {
   const { chess, yourArmy, effects, phase } = view;
   const boardRef = useRef<HTMLDivElement>(null);
   const previous = useRef<{ board: PlayerView['chess']['board']; effects: Effects; meta: BoardMeta } | null>(null);
@@ -29,7 +30,7 @@ export function HexBoard({ view, selectable, targets, selected, onSquare }: Prop
     const before = previous.current;
     previous.current = { board: view.chess.board, effects: view.effects, meta };
     if (!before || !boardRef.current || !shouldAnimate(before.meta, meta) || prefersReducedMotion()) return;
-    playTransition(boardRef.current, diffBoards(before.board, view.chess.board), newEffects(before.effects, view.effects));
+    playTransition(boardRef.current, diffBoards(before.board, view.chess.board), newEffects(before.effects, view.effects), colours);
   }, [view.chess.board, view.effects, view.yourArmy, view.turn]);
 
   const frozen = new Set(effects.frozen.map((f) => f.pieceId));
@@ -87,6 +88,7 @@ export function HexBoard({ view, selectable, targets, selected, onSquare }: Prop
               <PieceIcon
                 army={piece.army}
                 type={piece.type}
+                colour={colours[piece.army]}
                 pieceId={piece.id}
                 className={`${shielded.has(piece.id) ? 'shielded' : ''} ${moved.has(piece.id) ? 'moved' : ''}`}
               />

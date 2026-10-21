@@ -1,4 +1,4 @@
-import type { Action, Card, EffectArgs, PieceType, PlayerId, PlayerView, PromotionType, Square } from '@isachess/engine';
+import { asChoice, isJoker, type Action, type Card, type EffectArgs, type JokerChoice, type PieceType, type PlayerId, type PlayerView, type PromotionType, type Square } from '@isachess/engine';
 
 export type Selection =
   | { kind: 'idle' }
@@ -6,6 +6,7 @@ export type Selection =
       kind: 'cardChosen';
       cardId: string;
       asOne: boolean;
+      joker?: JokerChoice; // what a Joker was turned into
       picks: string[]; // piece ids picked so far (swap: up to 2; shapeshift: the piece)
       square?: Square; // shapeshift destination awaiting a promotion choice
       as?: PieceType;
@@ -17,6 +18,7 @@ export type Selection =
 export type UiEvent =
   | { type: 'clickCard'; cardId: string; asOne: boolean }
   | { type: 'clickSquare'; sq: Square }
+  | { type: 'chooseJoker'; choice: JokerChoice }
   | { type: 'chooseType'; as: PieceType }
   | { type: 'chooseTarget'; playerId: PlayerId }
   | { type: 'chooseCaptured'; index: number; asQueen: boolean }
@@ -31,10 +33,11 @@ export interface StepResult {
 
 const IDLE: Selection = { kind: 'idle' };
 
-type Role = 'plain' | 'swap' | 'freeze' | 'shield' | 'shapeshift' | 'revive' | 'targeted';
+type Role = 'plain' | 'joker' | 'swap' | 'freeze' | 'shield' | 'shapeshift' | 'revive' | 'targeted';
 type Chosen = Extract<Selection, { kind: 'cardChosen' }>;
 
 export function roleOf(card: Card): Role {
+  if (isJoker(card)) return 'joker';
   if (card.kind === 'skip') return 'shield';
   if (card.kind === 'wild') return 'revive';
   if (card.kind === 'num') {
@@ -49,11 +52,21 @@ export function roleOf(card: Card): Role {
 
 const squareOf = (view: PlayerView, id: string): Square => view.chess.board.findIndex((p) => p?.id === id);
 const idAt = (view: PlayerView, sq: Square): string | undefined => view.chess.board[sq]?.id;
-const playCard = (cardId: string, extra: { asOne?: true; args?: EffectArgs } = {}): Action => ({ type: 'playCard', cardId, ...extra });
+const playCard = (cardId: string, extra: { asOne?: true; args?: EffectArgs; joker?: JokerChoice; target?: PlayerId } = {}): Action => ({ type: 'playCard', cardId, ...extra });
+const withJoker = (sel: Chosen) => (sel.joker ? { joker: sel.joker } : {});
 
-function chosenRole(view: PlayerView, sel: Chosen): Role {
+/** What the chosen card does right now. A Joker is 'joker' until the player says what it becomes. */
+export function chosenRole(view: PlayerView, sel: Chosen): Role {
   const card = view.hand.find((c) => c.id === sel.cardId);
-  return card ? roleOf(card) : 'plain';
+  if (!card) return 'plain';
+  return isJoker(card) && sel.joker ? roleOf(asChoice(card, sel.joker)) : roleOf(card);
+}
+
+/** Whether a card with this role still needs the player to pick something (a piece, a square, an opponent). */
+function needsPick(view: PlayerView, role: Role): boolean {
+  const o = view.options;
+  return { plain: false, joker: true, swap: o.swaps.length > 0, freeze: o.freezeTargets.length > 0, shield: o.shieldTargets.length > 0,
+    shapeshift: o.shapeshifts.length > 0, revive: o.revives.length > 0, targeted: o.targets.length >= 2 }[role];
 }
 
 function clickCard(view: PlayerView, sel: Selection, cardId: string, asOne: boolean): StepResult {
@@ -64,15 +77,8 @@ function clickCard(view: PlayerView, sel: Selection, cardId: string, asOne: bool
   if (!card || !option) return { sel };
   if (asOne ? !option.asOne : !option.asEffect) return { sel };
   if (asOne) return { sel: IDLE, send: playCard(cardId, { asOne: true }) };
-  const o = view.options;
-  if (roleOf(card) === 'targeted') {
-    // One opponent left: the engine fills the target in. Two or more: ask which.
-    return o.targets.length >= 2 ? { sel: { kind: 'cardChosen', cardId, asOne: false, picks: [] } } : { sel: IDLE, send: playCard(cardId) };
-  }
-  const needsTarget =
-    { plain: false, swap: o.swaps.length > 0, freeze: o.freezeTargets.length > 0, shield: o.shieldTargets.length > 0,
-      shapeshift: o.shapeshifts.length > 0, revive: o.revives.length > 0, targeted: false }[roleOf(card)];
-  if (!needsTarget) return { sel: IDLE, send: playCard(cardId) };
+  // One opponent left: the engine fills the target in. Two or more: ask which.
+  if (!needsPick(view, roleOf(card))) return { sel: IDLE, send: playCard(cardId) };
   return { sel: { kind: 'cardChosen', cardId, asOne: false, picks: [] } };
 }
 
@@ -94,7 +100,7 @@ function clickSquareMoving(view: PlayerView, sel: Selection, sq: Square): StepRe
 function clickSquareCard(view: PlayerView, sel: Chosen, sq: Square): StepResult {
   const id = idAt(view, sq);
   const o = view.options;
-  const send = (args: EffectArgs): StepResult => ({ sel: IDLE, send: playCard(sel.cardId, { args }) });
+  const send = (args: EffectArgs): StepResult => ({ sel: IDLE, send: playCard(sel.cardId, { args, ...withJoker(sel) }) });
   switch (chosenRole(view, sel)) {
     case 'swap': {
       if (!id) return { sel };
@@ -146,9 +152,16 @@ export function step(view: PlayerView, sel: Selection, ev: UiEvent): StepResult 
         return { sel: { ...sel, as: ev.as } };
       }
       return { sel };
+    case 'chooseJoker': {
+      if (sel.kind !== 'cardChosen' || chosenRole(view, sel) !== 'joker') return { sel };
+      const card = view.hand.find((c) => c.id === sel.cardId)!;
+      if (!view.options.jokerChoices.some((c) => c.kind === ev.choice.kind && c.value === ev.choice.value)) return { sel };
+      if (needsPick(view, roleOf(asChoice(card, ev.choice)))) return { sel: { ...sel, joker: ev.choice } };
+      return { sel: IDLE, send: playCard(sel.cardId, { joker: ev.choice }) };
+    }
     case 'chooseTarget':
       if (sel.kind === 'cardChosen' && chosenRole(view, sel) === 'targeted' && view.options.targets.includes(ev.playerId)) {
-        return { sel: IDLE, send: { type: 'playCard', cardId: sel.cardId, target: ev.playerId } };
+        return { sel: IDLE, send: playCard(sel.cardId, { target: ev.playerId, ...withJoker(sel) }) };
       }
       return { sel };
     case 'chooseCaptured':
@@ -165,6 +178,7 @@ export function step(view: PlayerView, sel: Selection, ev: UiEvent): StepResult 
           sel: IDLE,
           send: playCard(sel.cardId, {
             args: { type: 'shapeshift', pieceId: sel.picks[0], as: sel.as, to: sel.square, promotion: ev.p },
+            ...withJoker(sel),
           }),
         };
       }
@@ -221,6 +235,7 @@ export function prompt(view: PlayerView, sel: Selection): string | null {
   if (sel.kind === 'pieceChosen') return sel.to !== undefined ? 'Choose a promotion piece' : null;
   if (sel.kind !== 'cardChosen') return null;
   switch (chosenRole(view, sel)) {
+    case 'joker': return 'Joker: choose what it becomes';
     case 'swap': return sel.picks.length === 0 ? 'Swap: pick two of your pieces' : 'Swap: pick the second piece';
     case 'freeze': return 'Freeze: pick an enemy piece';
     case 'shield': return 'Shield: pick one of your pieces (not the king)';

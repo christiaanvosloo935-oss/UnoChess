@@ -363,3 +363,23 @@ form { display: flex; flex-direction: column; gap: 1rem; }
 .three-note { margin: 2px 0 0; font-style: italic; }
 .card .card-icon { display: block; width: 1.05em; height: 1.05em; filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.18)); }
 .card .face .card-icon { width: 1.5em; height: 1.5em; }
+
+/* ---------- piece colour picker ---------- */
+.colour-field { display: flex; flex-direction: column; gap: 0.4rem; color: var(--muted); font-weight: 500; }
+.colour-picker { display: flex; flex-wrap: wrap; gap: 10px; }
+.swatch {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: 50%;
+  border: 2px solid var(--line-strong);
+  box-shadow: 0 2px 4px rgba(80, 60, 30, 0.2);
+}
+.swatch:hover:not(:disabled) { transform: scale(1.1); }
+.swatch.chosen { border-color: var(--text); box-shadow: 0 0 0 3px #fff, 0 0 0 5px var(--accent); }
+.swatch:disabled { opacity: 0.25; cursor: not-allowed; }
+.revealed { display: flex; flex-direction: column; gap: 10px; align-items: center; max-width: 100%; }
+.revealed-hand { display: flex; flex-direction: column; gap: 6px; align-items: center; }
+.revealed-cards { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.revealed-cards .card, .seat .card { opacity: 1; }
+.seat .revealed-cards { justify-content: flex-start; }

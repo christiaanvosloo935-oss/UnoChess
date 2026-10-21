@@ -14,6 +14,37 @@ describe('Rooms', () => {
     expect(state.hands[a.playerId]).toHaveLength(7);
   });
 
+  it('each player keeps the piece colour they picked, shown to both', () => {
+    const rooms = new Rooms({ seed: () => 1 });
+    const a = rooms.create('Alice', 'classic', 'violet');
+    expect(rooms.takenColours(a.gameId)).toEqual(['violet']);
+    const b = rooms.join(a.gameId, 'Bob', undefined, 'orange');
+    if (!b.ok) throw new Error('join failed');
+    const snap = rooms.snapshot(a.gameId, a.playerId);
+    expect(snap).toMatchObject({ type: 'state', room: { colours: { [a.playerId]: 'violet', [b.playerId]: 'orange' } } });
+  });
+
+  it('a joiner who picks the creator\'s colour gets black (or white) instead', () => {
+    const rooms = new Rooms({ seed: () => 1 });
+    const a = rooms.create('Alice', 'classic', 'black');
+    const b = rooms.join(a.gameId, 'Bob', undefined, 'black');
+    if (!b.ok) throw new Error('join failed');
+    const snap = rooms.snapshot(a.gameId, b.playerId);
+    expect(snap).toMatchObject({ room: { colours: { [a.playerId]: 'black', [b.playerId]: 'white' } } });
+  });
+
+  it('in a three-player game no two players share a colour', () => {
+    const rooms = new Rooms({ seed: () => 1 });
+    const a = rooms.create('Alice', 'three', 'red');
+    const b = rooms.join(a.gameId, 'Bob', undefined, 'red');
+    const c = rooms.join(a.gameId, 'Cy', undefined, 'black');
+    if (!b.ok || !c.ok) throw new Error('join failed');
+    const taken = rooms.takenColours(a.gameId)!;
+    expect(new Set(taken).size).toBe(3);
+    expect(taken).toEqual(['red', 'black', 'white']);
+    expect(rooms.snapshot(a.gameId, a.playerId)).toMatchObject({ room: { colours: { [a.playerId]: 'red', [b.playerId]: 'black', [c.playerId]: 'white' } } });
+  });
+
   it('a third visitor is told the game is full; unknown games are not found', () => {
     const rooms = new Rooms();
     const a = rooms.create('Alice');

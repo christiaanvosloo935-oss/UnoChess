@@ -58,7 +58,7 @@ test('three players create, join, play turns, see a full game, and one resigns',
   await expect(status(carol)).toHaveText('Your turn: play a card');
   await expect(status(alice)).toHaveText(/^Carol's turn/);
   await expect(status(bob)).toHaveText(/^Carol's turn/);
-  await expect(square(alice, 60).locator('img')).toHaveAttribute('alt', 'red pawn');
+  await expect(square(alice, 60).locator('img')).toHaveAttribute('alt', 'black pawn');
 
   // A fourth visitor finds the game full.
   const dave = await join(browser, link, 'Dave');

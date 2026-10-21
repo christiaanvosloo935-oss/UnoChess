@@ -3,7 +3,7 @@ import {
   START_FEN, apply, legalSwaps, legalShieldTargets, legalFreezeTargets, playableCards, armyOf,
   type Action, type GameState,
 } from '../src/index.js';
-import { card, num, sq, stateFrom } from './helpers.js';
+import { card, num, sq, stateFrom, rest } from './helpers.js';
 
 function ok(state: GameState, player: string, action: Action): GameState {
   const r = apply(state, player, action);
@@ -59,7 +59,7 @@ describe('6 · Swap', () => {
 
   it('a swap that escapes check is playable as an effect while in check', () => {
     const six = num(6);
-    const zero = num(0);
+    const zero = rest();
     const s = stateFrom('4r1k1/8/8/8/8/8/8/R3K3 w Q - 0 1', { w: [six, zero] });
     const options = playableCards(s, 'A');
     expect(options.find((o) => o.cardId === six.id)).toMatchObject({ asEffect: true, asOne: true });
@@ -94,7 +94,7 @@ describe('6 · Swap and frozen pieces', () => {
 describe('7 · Freeze', () => {
   it("a frozen piece can't move on its army's next turn, and can the turn after", () => {
     const seven = num(7);
-    const zero = num(0);
+    const zero = rest();
     const b1 = num(1);
     const b2 = num(1);
     let s = stateFrom('4k3/8/8/3q4/8/8/8/4K3 w - - 0 1', { w: [seven, zero], b: [b1, b2] });
@@ -121,7 +121,7 @@ describe('Skip · Shield', () => {
 
   it('a shielded queen cannot be captured until its owner’s next turn starts', () => {
     const shield = card('skip');
-    const zeroA = num(0);
+    const zeroA = rest();
     const b1 = num(1);
     let s = stateFrom(FEN, { w: [shield, zeroA], b: [b1] });
     s = ok(s, 'A', play(shield, { type: 'shield', pieceId: idAt(s, 'd2') }));

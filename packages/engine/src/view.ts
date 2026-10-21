@@ -1,12 +1,12 @@
 import {
-  legalFreezeTargets, legalRevives, legalShapeshifts, legalShieldTargets, legalSwaps, playableCards,
+  legalFreezeTargets, legalJokerChoices, legalRevives, legalShapeshifts, legalShieldTargets, legalSwaps, playableCards,
   type PlayableCard, type ReviveOption, type ShapeshiftOption,
 } from './cards.js';
 import { isInCheck, legalMoves } from './chess.js';
 import { geometryFor, type Variant } from './geometry.js';
 import { armyOf, ctxFor, isDeadArmy, opponentsOf } from './state.js';
 import type {
-  Army, Card, ChessState, Effects, GameEvent, GameState, LastPlayed, Move, Phase, PlayerId,
+  Army, Card, ChessState, Effects, GameEvent, GameState, JokerChoice, LastPlayed, Move, Phase, PlayerId,
 } from './types.js';
 
 export interface LegalOptions {
@@ -19,6 +19,7 @@ export interface LegalOptions {
   shapeshifts: ShapeshiftOption[];
   revives: ReviveOption[];
   targets: PlayerId[]; // active opponents a targeted card may pick
+  jokerChoices: JokerChoice[]; // what a Joker in hand may become right now
 }
 
 export interface OpponentView {
@@ -26,6 +27,7 @@ export interface OpponentView {
   army: Army;
   handCount: number;
   eliminated: boolean;
+  hand: Card[] | null; // revealed only once the viewer has been checkmated
 }
 
 export interface PlayerView {
@@ -53,7 +55,7 @@ const LOG_LIMIT = 50;
 function emptyOptions(): LegalOptions {
   return {
     cards: [], moves: [], canDoneMoving: false, swaps: [], freezeTargets: [], shieldTargets: [],
-    shapeshifts: [], revives: [], targets: [],
+    shapeshifts: [], revives: [], targets: [], jokerChoices: [],
   };
 }
 
@@ -79,6 +81,7 @@ export function legalOptions(state: GameState, player: PlayerId): LegalOptions {
       shieldTargets: legalShieldTargets(state, player),
       shapeshifts: legalShapeshifts(state, player),
       revives: legalRevives(state, player),
+      jokerChoices: legalJokerChoices(state, player),
     };
   }
   return emptyOptions();
@@ -89,6 +92,7 @@ function opponentViews(state: GameState, player: PlayerId): OpponentView[] {
   const armies = geometryFor(state.variant).armies;
   const n = state.players.length;
   const start = state.players.indexOf(player);
+  const reveal = state.checkmated?.includes(player) ?? false;
   const out: OpponentView[] = [];
   for (let i = 1; i < n; i++) {
     const id = state.players[(start + i) % n];
@@ -97,6 +101,7 @@ function opponentViews(state: GameState, player: PlayerId): OpponentView[] {
       army: armies.find((a) => state.seats[a] === id)!,
       handCount: state.hands[id].length,
       eliminated: state.eliminated.includes(id),
+      hand: reveal ? state.hands[id] : null,
     });
   }
   return out;

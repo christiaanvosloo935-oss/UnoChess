@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef } from 'react';
-import { exhaustedPieces, type Army, type Effects, type PlayerView, type Square } from '@isachess/engine';
+import { exhaustedPieces, type Army, type Effects, type PieceColour, type PlayerView, type Square } from '@isachess/engine';
 import { diffBoards, newEffects, shouldAnimate, type BoardMeta } from '../animation';
 import { playTransition, prefersReducedMotion } from '../animatePieces';
 import { PieceIcon } from './PieceIcon';
@@ -9,10 +9,11 @@ interface Props {
   selectable: Square[];
   targets: Square[];
   selected: Square[];
+  colours: Record<Army, PieceColour>;
   onSquare: (sq: Square) => void;
 }
 
-export function Board({ view, selectable, targets, selected, onSquare }: Props) {
+export function Board({ view, selectable, targets, selected, colours, onSquare }: Props) {
   const { chess, yourArmy, effects, phase } = view;
   const boardRef = useRef<HTMLDivElement>(null);
   const previous = useRef<{ board: PlayerView['chess']['board']; effects: Effects; meta: BoardMeta } | null>(null);
@@ -23,7 +24,7 @@ export function Board({ view, selectable, targets, selected, onSquare }: Props) 
     const before = previous.current;
     previous.current = { board: view.chess.board, effects: view.effects, meta };
     if (!before || !boardRef.current || !shouldAnimate(before.meta, meta) || prefersReducedMotion()) return;
-    playTransition(boardRef.current, diffBoards(before.board, view.chess.board), newEffects(before.effects, view.effects));
+    playTransition(boardRef.current, diffBoards(before.board, view.chess.board), newEffects(before.effects, view.effects), colours);
   }, [view.chess.board, view.effects, view.yourArmy, view.turn]);
 
   const ranks = yourArmy === 'w' ? [7, 6, 5, 4, 3, 2, 1, 0] : [0, 1, 2, 3, 4, 5, 6, 7];
@@ -56,6 +57,7 @@ export function Board({ view, selectable, targets, selected, onSquare }: Props) 
                 <PieceIcon
                   army={piece.army}
                   type={piece.type}
+                  colour={colours[piece.army]}
                   pieceId={piece.id}
                   className={`${shielded.has(piece.id) ? 'shielded' : ''} ${moved.has(piece.id) ? 'moved' : ''}`}
                 />

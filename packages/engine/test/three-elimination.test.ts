@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
+  viewFor,
   apply, isInCheck, legalFreezeTargets, legalMoves,
   type Action, type Army, type GameState, type PieceType,
 } from '../src/index.js';
-import { card, hexState, num } from './helpers.js';
+import { card, hexState, num, rest } from './helpers.js';
 
 type Pieces = [Army, PieceType, string][];
 
@@ -27,7 +28,7 @@ function ok(s: GameState, p: string, a: Action): GameState {
 }
 /** A plays a 0 card, so B's turn starts. */
 function aPassesTo(pieces: Pieces, extra: Partial<GameState> = {}, bHand = [num(3), num(4)]): GameState {
-  const zero = num(0);
+  const zero = rest();
   const base = hexState({ pieces, hands: { A: [zero, num(1)], B: bHand } });
   return ok({ ...base, ...extra }, 'A', play(zero));
 }
@@ -62,7 +63,7 @@ describe('elimination', () => {
   });
 
   it('clears the eliminated player\'s frozen pieces and shields', () => {
-    const base = hexState({ pieces: REDMATE, hands: { A: [num(0), num(1)], B: [num(3)] } });
+    const base = hexState({ pieces: REDMATE, hands: { A: [rest(), num(1)], B: [num(3)] } });
     const withEffects: GameState = {
       ...base,
       effects: {
@@ -135,7 +136,7 @@ describe('stalemate', () => {
   });
 
   it('every active player stalemated ends in a draw, without looping', () => {
-    const zero = num(0);
+    const zero = rest();
     const pieces: Pieces = [
       ['w', 'k', 'w.b1'], ['r', 'k', 'r.b1'], ['b', 'k', 'b.b1'],
       ['w', 'b', 'b.a1'], ['r', 'b', 'w.a1'], ['b', 'b', 'r.a1'],
@@ -153,13 +154,13 @@ describe('stalemate', () => {
   });
 
   it('a stalemated player\'s turn returns once a move exists', () => {
-    const zero = num(0);
+    const zero = rest();
     let s = aPassesTo(REDSTALE, {}, [num(3)]);
     // white (A) takes the queen away from the red king
     s = { ...s, chess: { ...s.chess, board: s.chess.board.map((p) => (p?.id === 'wq0' ? null : p)) } };
     s = ok({ ...s, hands: { ...s.hands, C: [zero] } }, 'C', play(zero));
     expect(s.current).toBe('A');
-    const another = num(0);
+    const another = rest();
     s = ok({ ...s, hands: { ...s.hands, A: [another] } }, 'A', play(another));
     expect(s.current).toBe('B');
     expect(s.phase).toEqual({ kind: 'awaitingCard' });
@@ -213,5 +214,22 @@ describe('resignation', () => {
     }, 'B', { type: 'resign' });
     expect(s.effects.frozen).toEqual([{ pieceId: 'bk0', army: 'b' }]);
     expect(s.effects.shields).toEqual([{ pieceId: 'wk0', owner: 'A' }]);
+  });
+});
+
+describe('checkmate reveal', () => {
+  it('a checkmated player sees every remaining hand, and nobody else does', () => {
+    const bHand = [num(3), num(4)];
+    const s = aPassesTo(REDMATE, {}, bHand);
+    expect(s.checkmated).toEqual(['B']);
+    const seen = viewFor(s, 'B').opponents;
+    expect(seen.map((o) => o.hand?.length ?? null)).toEqual(s.players.filter((p) => p !== 'B').map((p) => s.hands[p].length));
+    expect(viewFor(s, 'A').opponents.every((o) => o.hand === null)).toBe(true);
+    expect(viewFor(s, 'C').opponents.every((o) => o.hand === null)).toBe(true);
+  });
+
+  it('a resigned player learns nothing', () => {
+    const s = ok(hexState({ pieces: REDMATE.slice(0, 2).concat([['r', 'k', 'r.e1']]) }), 'B', { type: 'resign' });
+    expect(viewFor(s, 'B').opponents.every((o) => o.hand === null)).toBe(true);
   });
 });
