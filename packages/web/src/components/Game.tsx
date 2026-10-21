@@ -12,6 +12,7 @@ import { GameOver } from './GameOver';
 import { PieceIcon } from './PieceIcon';
 import { JokerPicker, PromotionPicker, RevivePicker, ShapeshiftPicker, TargetPicker } from './Pickers';
 import { Toast } from './Toast';
+import { TurnTimer } from './TurnTimer';
 import { COLOUR_HEX, DEFAULT_COLOURS } from '../pieceColours';
 
 const IDLE: Selection = { kind: 'idle' };
@@ -109,6 +110,7 @@ export function Game({ view, room, send, rematch, chat, me, sendChat, lastError,
             </div>
           )}
         </div>
+        <TurnTimer msLeft={room.turnMsLeft} stamp={view} />
         <p className={`status${view.inCheck.includes(view.yourArmy) ? ' alert' : ''}`} data-testid="status">
           {statusText(view, room, sel)}
         </p>

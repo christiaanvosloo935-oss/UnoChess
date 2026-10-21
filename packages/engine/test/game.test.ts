@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { START_FEN, createGame, apply, type Action, type Card, type GameState } from '../src/index.js';
+import { START_FEN, createGame, apply, skipTurn, type Action, type Card, type GameState } from '../src/index.js';
 import { card, num, sq, stateFrom, rest } from './helpers.js';
 
 function ok(state: GameState, player: string, action: Action): GameState {
@@ -300,5 +300,44 @@ describe('elimination and the hand', () => {
     const s = ok(stateFrom(START_FEN, { w: hand }), 'A', { type: 'resign' });
     expect(s.hands.A).toEqual(hand);
     expect(s.discardPile).toEqual([]);
+  });
+});
+
+describe('skipTurn (turn timer ran out)', () => {
+  it('passes the turn without playing a card, keeping the hand', () => {
+    const c = num(3);
+    const s = stateFrom(START_FEN, { w: [c, ...Array.from({ length: 6 }, () => num(2))] });
+    const r = skipTurn(s);
+    if (!r.ok) throw new Error(r.error);
+    expect(r.state.current).toBe('B');
+    expect(r.state.turn).toBe(2);
+    expect(r.state.hands.A.map((x) => x.id)).toEqual(s.hands.A.map((x) => x.id));
+    expect(r.state.discardPile).toEqual([]);
+    expect(r.state.log.at(-1)).toMatchObject({ player: 'A', text: 'ran out of time and skips their turn' });
+  });
+
+  it('ends a card that was already started, keeping the moves made', () => {
+    const c = num(3);
+    let s = stateFrom(START_FEN, { w: [c] });
+    s = ok(s, 'A', play(c));
+    s = ok(s, 'A', mv('e2', 'e4'));
+    const r = skipTurn(s);
+    if (!r.ok) throw new Error(r.error);
+    expect(r.state.current).toBe('B');
+    expect(r.state.phase).toEqual({ kind: 'awaitingCard' });
+    expect(r.state.chess.board[sq('e4')]).toMatchObject({ type: 'p', army: 'w' });
+  });
+
+  it("lets the skipped player's frozen pieces thaw, like a normal turn", () => {
+    const frozenId = stateFrom(START_FEN).chess.board[sq('e2')]!.id;
+    const s = stateFrom(START_FEN, {}, { effects: { frozen: [{ pieceId: frozenId, army: 'w' }], shields: [] } });
+    const r = skipTurn(s);
+    if (!r.ok) throw new Error(r.error);
+    expect(r.state.effects.frozen).toEqual([]);
+  });
+
+  it('is refused once the game is over', () => {
+    const s = ok(stateFrom(START_FEN), 'B', { type: 'resign' });
+    expect(skipTurn(s)).toEqual({ ok: false, error: 'The game is over.' });
   });
 });

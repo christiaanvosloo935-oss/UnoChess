@@ -10,6 +10,9 @@ const PORT = 4173;
 // and Black: 1, 5, 2, Reverse, Reverse, 7, +2, so White holds a Joker and both can play a multi-move card.
 const JOKER_SEED = 23;
 const JOKER_PORT = 4174;
+// A third server where a turn lasts only 2 seconds, for timer.spec.ts.
+const FAST_TURN_MS = 2000;
+const FAST_PORT = 4175;
 
 export default defineConfig({
   testDir: '.',
@@ -21,7 +24,7 @@ export default defineConfig({
   },
   projects: [{ name: 'chromium', use: { browserName: 'chromium' } }],
   webServer: {
-    command: `npm run build && (PORT=${JOKER_PORT} ISACHESS_SEED=${JOKER_SEED} node packages/server/dist/index.js & exec npm start)`,
+    command: `npm run build && (PORT=${JOKER_PORT} ISACHESS_SEED=${JOKER_SEED} node packages/server/dist/index.js & PORT=${FAST_PORT} ISACHESS_TURN_MS=${FAST_TURN_MS} node packages/server/dist/index.js & exec npm start)`,
     cwd: new URL('..', import.meta.url).pathname,
     url: `http://localhost:${PORT}`,
     timeout: 180_000,

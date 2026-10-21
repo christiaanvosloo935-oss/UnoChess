@@ -304,6 +304,16 @@ function doneMoving(s: GameState, player: PlayerId): string | void {
   return endCard(s, player, armyOf(s, player));
 }
 
+/** The player to move ran out of time: their turn passes, and a card they had started ends as it stands. */
+export function skipTurn(state: GameState): ApplyResult {
+  if (state.phase.kind === 'over') return { ok: false, error: 'The game is over.' };
+  const s = structuredClone(state);
+  const before = s.log.length;
+  log(s, s.current, 'ran out of time and skips their turn');
+  endCard(s, s.current, armyOf(s, s.current));
+  return { ok: true, state: s, events: s.log.slice(before) };
+}
+
 /** Finishes the current card: draw step, expire effects, pass the turn, then start the next player's turn. */
 export function endCard(s: GameState, player: PlayerId, playedArmy: Army): void {
   topUpHands(s, player);
