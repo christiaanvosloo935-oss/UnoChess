@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { apply, createGame, isInCheck, nextPlayer, armyOf, activePlayers, opponentsOf, type Action, type GameState } from '../src/index.js';
+import { apply, createGame, isInCheck, nextPlayer, skipTurn, armyOf, activePlayers, opponentsOf, type Action, type GameState } from '../src/index.js';
 import { card, hexState, num, rest } from './helpers.js';
 
 const K: [import('../src/index.js').Army, import('../src/index.js').PieceType, string][] = [
@@ -189,5 +189,24 @@ describe('Joker in a three-player game', () => {
     const s = hexState({ pieces: K, hands: { A: [joker, rest()], C: hc } });
     const after = ok(s, 'A', play(joker, { joker: { kind: 'num', value: 9 }, target: 'C' }));
     expect(after.hands.A.map((c) => c.id)).toContain(hc[0].id);
+  });
+});
+
+describe('skipTurn in a three-player game', () => {
+  it('moves on to the next player clockwise, and round again', () => {
+    let s = hexState({ pieces: K });
+    for (const expected of ['B', 'C', 'A']) {
+      const r = skipTurn(s);
+      if (!r.ok) throw new Error(r.error);
+      s = r.state;
+      expect(s.current).toBe(expected);
+    }
+  });
+
+  it('passes over an eliminated player', () => {
+    const s = { ...hexState({ pieces: K }), eliminated: ['B'], current: 'A' };
+    const r = skipTurn(s);
+    if (!r.ok) throw new Error(r.error);
+    expect(r.state.current).toBe('C');
   });
 });

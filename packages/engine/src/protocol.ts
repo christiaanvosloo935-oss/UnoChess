@@ -14,6 +14,7 @@ export interface RoomInfo {
   names: Record<PlayerId, string>;
   colours: Record<PlayerId, PieceColour>;
   connected: Record<PlayerId, boolean>;
+  turnMsLeft: number | null; // time left to finish the current turn; null when no turn is running
   rematch: Record<PlayerId, boolean>;
 }
 

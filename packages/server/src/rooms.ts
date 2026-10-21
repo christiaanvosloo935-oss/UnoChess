@@ -1,11 +1,13 @@
 import { randomBytes, randomInt, randomUUID, timingSafeEqual } from 'node:crypto';
 import {
-  PIECE_COLOURS, apply, createGame, geometryFor, viewFor,
+  PIECE_COLOURS, apply, createGame, geometryFor, skipTurn, viewFor,
   type Action, type ChatMessage, type GameState, type PieceColour, type PlayerId, type RoomInfo, type ServerMessage, type Variant,
 } from '@isachess/engine';
 
 const ID_CHARS = 'abcdefghjkmnpqrstuvwxyz23456789';
 export const MAX_CHAT_LENGTH = 200;
+/** How long a player has for a whole turn (the card and its moves) before the turn is skipped. */
+export const TURN_MS = 60_000;
 const CHAT_BURST = 5;
 const CHAT_WINDOW_MS = 3000;
 
@@ -25,11 +27,19 @@ export interface Room {
   connections: Record<PlayerId, number>;
   rematchVotes: Set<PlayerId>;
   lastActivity: number;
+  turnKey: string | null; // which turn the running clock belongs to
+  turnDeadline: number | null;
 }
 
 export interface RoomsOptions {
   seed?: () => number;
   now?: () => number;
+  turnMs?: number;
+}
+
+function defaultTurnMs(): number {
+  const fixed = Number(process.env.ISACHESS_TURN_MS);
+  return Number.isFinite(fixed) && fixed > 0 ? fixed : TURN_MS;
 }
 
 function defaultSeed(): number {
@@ -64,11 +74,14 @@ export class Rooms {
   private listeners = new Set<(gameId: string) => void>();
   private seed: () => number;
   private now: () => number;
+  private turnMs: number;
+  private timers = new Map<string, ReturnType<typeof setTimeout>>();
   private recentChats = new Map<PlayerId, number[]>();
 
   constructor(opts: RoomsOptions = {}) {
     this.seed = opts.seed ?? defaultSeed;
     this.now = opts.now ?? Date.now;
+    this.turnMs = opts.turnMs ?? defaultTurnMs();
   }
 
   onChange(listener: (gameId: string) => void): void {
@@ -102,6 +115,8 @@ export class Rooms {
       connections: {},
       rematchVotes: new Set(),
       lastActivity: this.now(),
+      turnKey: null,
+      turnDeadline: null,
     });
     return { gameId, seatToken: seat.token, playerId: seat.playerId };
   }
@@ -122,6 +137,7 @@ export class Rooms {
     room.seats.push(seat);
     if (room.seats.length === room.capacity) {
       room.state = createGame(this.seed(), room.seats.map((s) => s.playerId), room.variant);
+      this.syncTimer(room);
     }
     this.emit(gameId);
     return { ok: true, playerId: seat.playerId, seatToken: seat.token };
@@ -130,6 +146,32 @@ export class Rooms {
   /** The colours already picked in a game, so a newcomer's picker can mark them as taken. */
   takenColours(gameId: string): PieceColour[] | undefined {
     return this.rooms.get(gameId)?.seats.map((x) => x.colour);
+  }
+
+  /** Starts a fresh turn clock whenever the turn has changed hands, and stops it when the game is over. */
+  private syncTimer(room: Room): void {
+    const state = room.state;
+    const key = state && state.phase.kind !== 'over' ? `${state.turn}:${state.current}` : null;
+    if (key === room.turnKey) return;
+    clearTimeout(this.timers.get(room.id));
+    this.timers.delete(room.id);
+    room.turnKey = key;
+    room.turnDeadline = key ? this.now() + this.turnMs : null;
+    if (!state || !key) return;
+    const timer = setTimeout(() => this.timeUp(room.id, state.turn), this.turnMs);
+    timer.unref();
+    this.timers.set(room.id, timer);
+  }
+
+  /** The turn clock ran out: skip that turn, unless the turn has already moved on. */
+  private timeUp(gameId: string, turn: number): void {
+    const room = this.rooms.get(gameId);
+    if (!room?.state || room.state.turn !== turn) return;
+    const result = skipTurn(room.state);
+    if (!result.ok) return;
+    room.state = result.state;
+    this.syncTimer(room);
+    this.emit(gameId);
   }
 
   attach(gameId: string, playerId: PlayerId): void {
@@ -155,6 +197,7 @@ export class Rooms {
     const result = apply(room.state, playerId, action);
     if (!result.ok) return result;
     room.state = result.state;
+    this.syncTimer(room);
     this.emit(gameId);
     return { ok: true };
   }
@@ -171,6 +214,7 @@ export class Rooms {
       const [first, ...rest] = room.state.players;
       room.state = createGame(this.seed(), [...rest, first], room.variant);
       room.rematchVotes.clear();
+      this.syncTimer(room);
     }
     this.emit(gameId);
     return { ok: true };
@@ -196,7 +240,11 @@ export class Rooms {
   cleanup(maxIdleMs: number): void {
     const cutoff = this.now() - maxIdleMs;
     for (const [id, room] of this.rooms) {
-      if (room.lastActivity < cutoff) this.rooms.delete(id);
+      if (room.lastActivity < cutoff) {
+        clearTimeout(this.timers.get(id));
+        this.timers.delete(id);
+        this.rooms.delete(id);
+      }
     }
   }
 
@@ -210,6 +258,7 @@ export class Rooms {
       colours: Object.fromEntries(room.seats.map((s) => [s.playerId, s.colour])),
       connected: Object.fromEntries(room.state.players.map((p) => [p, (room.connections[p] ?? 0) > 0])),
       rematch: Object.fromEntries(room.state.players.map((p) => [p, room.rematchVotes.has(p)])),
+      turnMsLeft: room.turnDeadline === null ? null : Math.max(0, room.turnDeadline - this.now()),
     };
     return { type: 'state', view: viewFor(room.state, playerId), room: info };
   }
