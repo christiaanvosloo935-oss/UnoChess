@@ -14,7 +14,7 @@ export const COLOUR_HEX: Record<PieceColour, string> = {
   white: '#ffffff',
 };
 
-export const DEFAULT_COLOURS: Record<Army, PieceColour> = { w: 'white', b: 'black' };
+export const DEFAULT_COLOURS: Record<Army, PieceColour> = { w: 'white', r: 'red', b: 'black' };
 
 /** The SVG for a piece: the classic sets for white and black, the tinted sets for every other colour. */
 export function pieceSrc(army: Army, type: PieceType, colour?: PieceColour): string {

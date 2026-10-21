@@ -5,10 +5,11 @@ import { Chat } from './components/Chat';
 import { Game } from './components/Game';
 import { Home } from './components/Home';
 import { useGame } from './useGame';
-import { hostColour } from './api';
+import { takenColours } from './api';
 import { getColour, getNickname, getSeat, saveColour, saveNickname } from './seat';
 import { ColourPicker } from './components/ColourPicker';
 import type { PieceColour } from '@isachess/engine';
+import { PIECE_COLOURS } from './pieceColours';
 
 function usePath(): [string, (path: string) => void] {
   const [path, setPath] = useState(location.pathname);
@@ -27,11 +28,12 @@ function usePath(): [string, (path: string) => void] {
 function NicknamePrompt({ gameId, onDone }: { gameId: string; onDone: (nick: string, colour: PieceColour) => void }) {
   const [nick, setNick] = useState(getNickname());
   const [colour, setColour] = useState(getColour());
-  const [taken, setTaken] = useState<PieceColour | undefined>();
+  const [taken, setTaken] = useState<PieceColour[]>([]);
   useEffect(() => {
-    void hostColour(gameId).then((c) => {
-      setTaken(c);
-      if (c) setColour((mine) => (mine === c ? (c === 'black' ? 'white' : 'black') : mine));
+    void takenColours(gameId).then((used) => {
+      setTaken(used);
+      // Start on a colour nobody has, preferring black and white.
+      setColour((mine) => (used.includes(mine) ? (['black', 'white', ...PIECE_COLOURS] as PieceColour[]).find((c) => !used.includes(c)) ?? mine : mine));
     });
   }, [gameId]);
   return (
@@ -73,7 +75,8 @@ function GameRoute({ gameId, go }: { gameId: string; go: (path: string) => void 
       const link = `${location.origin}/g/${gameId}`;
       return (
         <main className="home">
-          <h1>Waiting for your friend…</h1>
+          <h1>Waiting for {conn.needed} more {conn.needed === 1 ? 'player' : 'players'}…</h1>
+          {conn.names.length > 0 && <p className="muted" data-testid="lobby-names">Joined: {conn.names.join(', ')}</p>}
           <p>Send them this link:</p>
           <input readOnly value={link} data-testid="copy-link" onFocus={(e) => e.target.select()} />
           <button onClick={() => navigator.clipboard?.writeText(link)}>Copy link</button>

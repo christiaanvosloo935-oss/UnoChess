@@ -6,6 +6,7 @@ export interface GuideEntry {
   sample: Card; // the card drawn next to the explanation
   label?: string; // overrides the symbol on the sample (e.g. "1–5")
   caption?: string;
+  threePlayerNote?: string; // extra line shown in three-player games
   matches: (card: Card) => boolean;
 }
 
@@ -27,7 +28,7 @@ export const GUIDE: GuideEntry[] = [
   },
   {
     title: '1–5 · Moves',
-    text: 'Make that many moves, one after another. Each piece can move only once, and the moment you give check your turn ends.',
+    text: 'Make that many moves, one after another. Each piece can move up to twice, and the moment you give check your turn ends.',
     sample: sample('num', 'blue', 3),
     label: '1–5',
     caption: 'Moves',
@@ -55,6 +56,7 @@ export const GUIDE: GuideEntry[] = [
     title: '9 · Trade Hands',
     text: "Swap your whole hand with your opponent's.",
     sample: sample('num', 'blue', 9),
+    threePlayerNote: 'In a three-player game, you choose which opponent.',
     matches: num(9),
   },
   {
@@ -67,11 +69,12 @@ export const GUIDE: GuideEntry[] = [
     title: 'Switch sides',
     text: 'You and your opponent swap seats and now control the other army. Each of you keeps your own hand.',
     sample: sample('reverse', 'yellow'),
+    threePlayerNote: 'In a three-player game, you choose which opponent.',
     matches: kind('reverse'),
   },
   {
     title: 'Draw two',
-    text: 'Your opponent skips their next turn and draws 2 cards.',
+    text: 'You draw 2 extra cards and your turn ends. Play down to 7 before you draw again.',
     sample: sample('draw2', 'red'),
     matches: kind('draw2'),
   },
@@ -83,7 +86,7 @@ export const GUIDE: GuideEntry[] = [
   },
   {
     title: 'Draw four',
-    text: 'Your opponent skips their next turn and draws 4 cards.',
+    text: 'You draw 4 extra cards and your turn ends. Play down to 7 before you draw again.',
     sample: sample('wild4', null),
     matches: kind('wild4'),
   },
@@ -91,7 +94,7 @@ export const GUIDE: GuideEntry[] = [
 
 export const GOOD_TO_KNOW = [
   "Card colours don't matter: any card can be played at any time.",
-  'After you play a card, you draw one to fill your hand back up to 7.',
+  'After every card, everyone is topped up to 7 cards. Nobody ever holds fewer than 7, as long as the draw pile lasts.',
   "If you're in check, the card you play must get you out of it. Or play any card as a single move.",
   'You win by checkmate. Running out of cards never ends the game.',
 ];

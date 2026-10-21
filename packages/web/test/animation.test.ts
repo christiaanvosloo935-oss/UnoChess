@@ -72,7 +72,7 @@ describe('diffBoards', () => {
 
   it('a revived piece appears in place', () => {
     const wild = card('wild');
-    const before = stateFrom('4k3/8/8/8/8/8/8/4K3 w - - 0 1', { w: [wild] }, { captured: { w: ['n'], b: [] } });
+    const before = stateFrom('4k3/8/8/8/8/8/8/4K3 w - - 0 1', { w: [wild] }, { captured: { w: ['n'], r: [], b: [] } });
     const after = ok(before, 'A', play(wild, { type: 'revive', capturedIndex: 0, square: sq('b1') }));
     const diff = diffBoards(before.chess.board, after.chess.board);
     expect(diff.appeared).toEqual([{ id: after.chess.board[sq('b1')]!.id, square: sq('b1') }]);
@@ -93,8 +93,8 @@ describe('diffBoards', () => {
 
 describe('newEffects', () => {
   it('lists only the pieces that just became frozen or shielded', () => {
-    const none = { frozen: [], shields: [], pendingSkip: null };
-    const next = { frozen: [{ pieceId: 'bq0', army: 'b' as const }], shields: [{ pieceId: 'wr0', owner: 'A' }], pendingSkip: null };
+    const none = { frozen: [], shields: [] };
+    const next = { frozen: [{ pieceId: 'bq0', army: 'b' as const }], shields: [{ pieceId: 'wr0', owner: 'A' }] };
     expect(newEffects(none, next)).toEqual({ frozen: ['bq0'], shielded: ['wr0'] });
     expect(newEffects(next, next)).toEqual({ frozen: [], shielded: [] });
   });

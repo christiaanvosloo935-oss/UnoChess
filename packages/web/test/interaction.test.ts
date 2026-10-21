@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { apply, viewFor, START_FEN, type Action, type GameState, type PlayerView } from '@isachess/engine';
 import { highlights, prompt, step, type Selection } from '../src/interaction';
-import { card, num, sq, stateFrom } from '../../engine/test/helpers';
+import { card, hexState, num, sq, stateFrom } from '../../engine/test/helpers';
 
 const IDLE: Selection = { kind: 'idle' };
 const viewA = (s: GameState): PlayerView => viewFor(s, 'A');
@@ -117,7 +117,7 @@ describe('targeted cards', () => {
 
   it('revive flow with a pawn returning as a queen', () => {
     const c = card('wild');
-    const s = stateFrom('4k3/8/8/8/8/8/8/4K3 w - - 0 1', { w: [c] }, { captured: { w: ['p'], b: [] } });
+    const s = stateFrom('4k3/8/8/8/8/8/8/4K3 w - - 0 1', { w: [c] }, { captured: { w: ['p'], r: [], b: [] } });
     const v = viewA(s);
     let r = step(v, IDLE, { type: 'clickCard', cardId: c.id, asOne: false });
     expect(highlights(v, r.sel).targets).toEqual([]);
@@ -165,6 +165,66 @@ describe('moving phase', () => {
   });
 });
 
+describe('targeted cards (three players)', () => {
+  const three = (hand: ReturnType<typeof card>[]) => hexState({
+    pieces: [['w', 'k', 'w.e1'], ['r', 'k', 'r.e1'], ['b', 'k', 'b.e1']],
+    hands: { A: hand },
+  });
+  const click = (v: PlayerView, c: { id: string }) => step(v, IDLE, { type: 'clickCard', cardId: c.id, asOne: false });
+
+  it('a targeted card with one opponent sends playCard without a target', () => {
+    const c = card('reverse');
+    const s = three([c]);
+    s.eliminated = ['C'];
+    const v = viewFor(s, 'A');
+    expect(v.options.targets).toEqual(['B']);
+    const r = click(v, c);
+    expect(r.send).toEqual({ type: 'playCard', cardId: c.id });
+    expect(r.sel).toEqual(IDLE);
+  });
+
+  it('+2 and +4 are sent at once even with two opponents, because nobody is chosen', () => {
+    for (const kind of ['draw2', 'wild4'] as const) {
+      const c = card(kind);
+      const v = viewFor(three([c]), 'A');
+      expect(v.options.targets).toEqual(['B', 'C']);
+      const r = click(v, c);
+      expect(r.send).toEqual({ type: 'playCard', cardId: c.id });
+      expect(r.sel).toEqual(IDLE);
+    }
+  });
+
+  it('with two opponents clicking the card selects it and the prompt asks which opponent', () => {
+    const c = card('reverse');
+    const v = viewFor(three([c]), 'A');
+    const r = click(v, c);
+    expect(r.send).toBeUndefined();
+    expect(r.sel).toMatchObject({ kind: 'cardChosen', cardId: c.id });
+    expect(prompt(v, r.sel)).toBe('Choose which opponent');
+    expect(highlights(v, r.sel)).toEqual({ selectable: [], targets: [] });
+  });
+
+  it('chooseTarget sends playCard with the target and returns to idle', () => {
+    const c = num(9);
+    const v = viewFor(three([c]), 'A');
+    const picked = click(v, c).sel;
+    const r = step(v, picked, { type: 'chooseTarget', playerId: 'C' });
+    expect(r.send).toEqual({ type: 'playCard', cardId: c.id, target: 'C' });
+    expect(r.sel).toEqual(IDLE);
+  });
+
+  it('chooseTarget for a player not in options.targets is ignored', () => {
+    const c = card('reverse');
+    const v = viewFor(three([c]), 'A');
+    const picked = click(v, c).sel;
+    for (const playerId of ['A', 'Z']) {
+      const r = step(v, picked, { type: 'chooseTarget', playerId });
+      expect(r.send).toBeUndefined();
+      expect(r.sel).toEqual(picked);
+    }
+  });
+});
+
 describe('Joker (0 card)', () => {
   const choice = (kind: 'num' | 'reverse' | 'wild4', value?: number) => ({ kind, ...(value !== undefined ? { value } : {}) });
 
@@ -200,5 +260,17 @@ describe('Joker (0 card)', () => {
     expect(picked.sel.kind).toBe('cardChosen');
     expect(step(v, picked.sel, { type: 'chooseJoker', choice: choice('wild4') }).send).toBeUndefined();
     expect(step(v, picked.sel, { type: 'chooseJoker', choice: choice('num', 2) }).send).toBeDefined();
+  });
+
+  it('in a three-player game a Joker that becomes Switch sides asks which opponent, then sends both', () => {
+    const j = num(0);
+    const s = hexState({ pieces: [['w', 'k', 'w.e1'], ['r', 'k', 'r.e1'], ['b', 'k', 'b.e1']], hands: { A: [j] } });
+    const v = viewFor(s, 'A');
+    let r = step(v, IDLE, { type: 'clickCard', cardId: j.id, asOne: false });
+    r = step(v, r.sel, { type: 'chooseJoker', choice: choice('reverse') });
+    expect(r.send).toBeUndefined();
+    expect(prompt(v, r.sel)).toMatch(/opponent/);
+    const done = step(v, r.sel, { type: 'chooseTarget', playerId: 'C' });
+    expect(done.send).toEqual({ type: 'playCard', cardId: j.id, joker: { kind: 'reverse' }, target: 'C' });
   });
 });

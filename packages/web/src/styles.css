@@ -141,6 +141,20 @@ form { display: flex; flex-direction: column; gap: 1rem; }
   background: rgba(26, 54, 33, 0.4);
 }
 .sq.in-check { background-image: radial-gradient(circle, rgba(217, 41, 63, 0.9), rgba(217, 41, 63, 0) 75%); }
+.hexboard { position: relative; width: 100%; margin: 0 auto; }
+.hexboard .sq { position: absolute; display: flex; align-items: center; justify-content: center; padding: 0; border: 0; border-radius: 0; font-size: 1rem; background: none; box-shadow: none; pointer-events: none; }
+.hexboard .sq.light, .hexboard .sq.dark, .hexboard .sq.selected, .hexboard .sq.in-check { background: none; }
+/* The button itself is never clipped (pieces and ghosts animate across cell edges); the clipped face draws the cell and takes the clicks. */
+.hexboard .hex-face { position: absolute; inset: 0; pointer-events: auto; }
+.hexboard .sq.light > .hex-face { background-color: #eeeed2; }
+.hexboard .sq.dark > .hex-face { background-color: #769656; }
+.hexboard .sq.selectable > .hex-face { background-image: linear-gradient(rgba(23, 58, 48, 0.28), rgba(23, 58, 48, 0.28)); }
+.hexboard .sq.selectable, .hexboard .sq.target { cursor: pointer; }
+.hexboard .sq.selectable > .hex-face, .hexboard .sq.target > .hex-face { cursor: pointer; }
+.hexboard .sq.selected > .hex-face { background-image: linear-gradient(rgba(61, 169, 252, 0.5), rgba(61, 169, 252, 0.5)); }
+.hexboard .sq.in-check > .hex-face { background-image: radial-gradient(circle, rgba(217, 41, 63, 0.9), rgba(217, 41, 63, 0) 75%); }
+.hexboard .sq:focus-visible > .hex-face { background-image: linear-gradient(rgba(61, 169, 252, 0.4), rgba(61, 169, 252, 0.4)); }
+.hexboard .sq .piece-img { width: 62%; height: 62%; position: relative; }
 .coord { position: absolute; font-size: 0.6rem; font-weight: 700; pointer-events: none; }
 .sq.light .coord { color: #4f6b34; }
 .sq.dark .coord { color: #14240a; }
@@ -227,6 +241,8 @@ form { display: flex; flex-direction: column; gap: 1rem; }
   box-shadow: 0 2px 6px rgba(16, 24, 40, 0.25);
 }
 .card-empty { background: transparent; border-style: dashed; border-color: var(--line-strong); box-shadow: none; }
+.last-played { display: flex; align-items: center; gap: 8px; margin-left: auto; font-size: 0.85rem; }
+.last-played .card { opacity: 1; }
 .piles { display: flex; gap: 20px; }
 .piles > div { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
 .log { margin: 0; padding-left: 1.1rem; max-height: 260px; overflow-y: auto; font-size: 0.85rem; color: var(--muted); display: flex; flex-direction: column; gap: 2px; }
@@ -319,6 +335,10 @@ form { display: flex; flex-direction: column; gap: 1rem; }
 .guide-modal { width: min(94vw, 560px); align-items: stretch; max-height: 92vh; }
 .guide-modal .card-guide { max-height: 62vh; background: transparent; border: 0; box-shadow: none; padding: 0; }
 .home .card-guide { max-height: none; }
+@media (min-width: 701px) {
+  .guide-modal { width: min(94vw, 940px); }
+  .guide-modal .guide-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 20px; }
+}
 .card .face.wide { font-size: 1.05rem; white-space: nowrap; }
 
 @keyframes fade-in { from { opacity: 0; } }
@@ -329,6 +349,20 @@ form { display: flex; flex-direction: column; gap: 1rem; }
 
 .card .shield-icon { display: block; width: 1.05em; height: 1.1em; filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.18)); }
 .card .face .shield-icon { width: 1.45em; height: 1.55em; }
+
+/* three players */
+.opponents { display: flex; flex-direction: column; gap: 4px; }
+.opponent.out { opacity: 0.6; }
+.badge-out { background: #f3ece0; border: 1px solid var(--line-strong); border-radius: 12px; padding: 1px 10px; font-size: 0.8rem; font-weight: 600; color: var(--muted); }
+.army-dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; border: 1px solid var(--line-strong); }
+.army-w { background: #fff; }
+.army-r { background: #c0392b; }
+.army-b { background: #2b2a33; }
+.start-buttons { display: flex; gap: 10px; flex-wrap: wrap; }
+.start-buttons button { flex: 1 1 10rem; }
+.three-note { margin: 2px 0 0; font-style: italic; }
+.card .card-icon { display: block; width: 1.05em; height: 1.05em; filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.18)); }
+.card .face .card-icon { width: 1.5em; height: 1.5em; }
 
 /* ---------- piece colour picker ---------- */
 .colour-field { display: flex; flex-direction: column; gap: 0.4rem; color: var(--muted); font-weight: 500; }
@@ -344,6 +378,8 @@ form { display: flex; flex-direction: column; gap: 1rem; }
 .swatch:hover:not(:disabled) { transform: scale(1.1); }
 .swatch.chosen { border-color: var(--text); box-shadow: 0 0 0 3px #fff, 0 0 0 5px var(--accent); }
 .swatch:disabled { opacity: 0.25; cursor: not-allowed; }
-.revealed { display: flex; flex-direction: column; gap: 6px; align-items: center; max-width: 100%; }
+.revealed { display: flex; flex-direction: column; gap: 10px; align-items: center; max-width: 100%; }
+.revealed-hand { display: flex; flex-direction: column; gap: 6px; align-items: center; }
 .revealed-cards { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
-.revealed-cards .card { opacity: 1; }
+.revealed-cards .card, .seat .card { opacity: 1; }
+.seat .revealed-cards { justify-content: flex-start; }

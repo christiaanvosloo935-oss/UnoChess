@@ -1,6 +1,7 @@
-import type { PieceColour, PieceType, PlayerView, PromotionType } from '@isachess/engine';
-import { asChoice, type Card, type JokerChoice } from '@isachess/engine';
+import { asChoice, type Army, type Card, type JokerChoice, type PieceColour, type PieceType, type PlayerView, type PromotionType } from '@isachess/engine';
+import { COLOUR_HEX } from '../pieceColours';
 import { CardView } from './CardView';
+import { ARMY_NAME } from './ArmyName';
 import { PIECE_NAME } from './pieceNames';
 import { PieceIcon } from './PieceIcon';
 
@@ -16,7 +17,7 @@ export function Modal({ title, children, onCancel }: { title: string; children: 
   );
 }
 
-export function PromotionPicker({ army, colour, onPick, onCancel }: { army: 'w' | 'b'; colour?: PieceColour; onPick: (p: PromotionType) => void; onCancel: () => void }) {
+export function PromotionPicker({ army, colour, onPick, onCancel }: { army: Army; colour?: PieceColour; onPick: (p: PromotionType) => void; onCancel: () => void }) {
   return (
     <Modal title="Promote to…" onCancel={onCancel}>
       {(['q', 'r', 'b', 'n'] as const).map((p) => (
@@ -66,12 +67,30 @@ export function RevivePicker({ view, colour, onPick, onCancel }: { view: PlayerV
   );
 }
 
+export function TargetPicker({ view, names, colours, onPick, onCancel }: { view: PlayerView; names: Record<string, string>; colours: Record<Army, PieceColour>; onPick: (id: string) => void; onCancel: () => void }) {
+  const active = view.opponents.filter((o) => view.options.targets.includes(o.id));
+  return (
+    <Modal title="Which opponent?" onCancel={onCancel}>
+      {active.map((o) => (
+        <button key={o.id} type="button" className="choice" onClick={() => onPick(o.id)} data-testid={`target-${o.id}`}>
+          <span className="army-dot" style={{ background: COLOUR_HEX[colours[o.army]] }} aria-hidden="true" />
+          {names[o.id] ?? 'Player'}
+          <span className="muted">{ARMY_NAME[o.army]}</span>
+        </button>
+      ))}
+    </Modal>
+  );
+}
+
 export function JokerPicker({ view, card, onPick, onCancel }: { view: PlayerView; card: Card; onPick: (choice: JokerChoice) => void; onCancel: () => void }) {
   return (
     <Modal title="Joker: become which card?" onCancel={onCancel}>
       {view.options.jokerChoices.map((choice) => {
-        const kind = choice.kind;
-        const face: Card = { ...asChoice(card, choice), id: `joker-as-${kind}-${choice.value ?? ''}`, colour: kind === 'wild' || kind === 'wild4' ? null : card.colour };
+        const face: Card = {
+          ...asChoice(card, choice),
+          id: `joker-as-${choice.kind}-${choice.value ?? ''}`,
+          colour: choice.kind === 'wild' || choice.kind === 'wild4' ? null : card.colour,
+        };
         return <CardView key={face.id} card={face} onClick={() => onPick(choice)} />;
       })}
     </Modal>

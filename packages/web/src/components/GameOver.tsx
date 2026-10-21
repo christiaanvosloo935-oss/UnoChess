@@ -6,22 +6,35 @@ export function GameOver({ view, room, onRematch }: { view: PlayerView; room: Ro
   const { winner, reason } = view.phase;
   const title = winner === null ? 'Draw' : winner === view.you ? 'You win!' : `${room.names[winner]} wins`;
   const why = { checkmate: 'Checkmate', stalemate: 'Stalemate', resign: 'Resignation' }[reason];
+  const three = view.opponents.length > 1;
+  const seated = [view.you, ...view.opponents.map((o) => o.id)];
+  const voted = seated.filter((id) => room.rematch[id]);
+  const waiting = seated.length - voted.length;
+  const iVoted = !!room.rematch[view.you];
   return (
     <div className="modal-backdrop">
       <div className="modal" role="dialog" aria-label="Game over">
         <h2 data-testid="result">{title}</h2>
         <p>{why}</p>
-        {view.opponentHand && (
+        {view.opponents.some((o) => o.hand) && (
           <div className="revealed" data-testid="revealed-hand">
-            <span className="muted">{room.names[view.opponent] ?? 'Your opponent'} was holding</span>
-            <div className="revealed-cards">
-              {view.opponentHand.map((c) => <CardView key={c.id} card={c} disabled small />)}
-            </div>
+            {view.opponents.filter((o) => o.hand && o.hand.length > 0).map((o) => (
+              <div key={o.id} className="revealed-hand">
+                <span className="muted">{room.names[o.id] ?? 'Your opponent'} was holding</span>
+                <div className="revealed-cards">
+                  {o.hand!.map((c) => <CardView key={c.id} card={c} disabled small />)}
+                </div>
+              </div>
+            ))}
           </div>
         )}
-        {room.rematch.opponent && !room.rematch.you && <p>Your opponent wants a rematch.</p>}
-        <button type="button" onClick={onRematch} disabled={room.rematch.you} data-testid="rematch">
-          {room.rematch.you ? 'Waiting for opponent…' : 'Rematch'}
+        {!three && room.rematch[view.opponents[0].id] && !iVoted && <p>Your opponent wants a rematch.</p>}
+        {three && voted.length > 0 && (
+          <p data-testid="rematch-votes">Rematch: {voted.map((id) => (id === view.you ? 'You' : room.names[id] ?? 'Player')).join(', ')}</p>
+        )}
+        {three && iVoted && waiting > 0 && <p>Waiting for {waiting} more to vote</p>}
+        <button type="button" onClick={onRematch} disabled={iVoted} data-testid="rematch">
+          {iVoted ? (three ? 'Waiting for others…' : 'Waiting for opponent…') : 'Rematch'}
         </button>
       </div>
     </div>

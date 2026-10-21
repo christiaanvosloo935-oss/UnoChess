@@ -16,6 +16,7 @@ export function CardGuide({ hand = [] }: { hand?: readonly Card[] }) {
                 {held.has(entry) && <span className="held-badge">In your hand</span>}
               </h4>
               <p>{entry.text}</p>
+              {entry.threePlayerNote && <p className="muted three-note">{entry.threePlayerNote}</p>}
             </div>
           </li>
         ))}

@@ -1,4 +1,6 @@
-export type Army = 'w' | 'b';
+import type { Variant } from './geometry.js';
+
+export type Army = 'w' | 'r' | 'b';
 export type PieceType = 'p' | 'n' | 'b' | 'r' | 'q' | 'k';
 export type PromotionType = 'q' | 'r' | 'b' | 'n';
 export type Square = number;
@@ -10,18 +12,17 @@ export interface Piece {
   army: Army;
 }
 
-export interface Castling {
-  w: { k: boolean; q: boolean };
-  b: { k: boolean; q: boolean };
-}
+export type Castling = Record<Army, { k: boolean; q: boolean }>;
 
 export interface EnPassant {
   square: Square;
+  victim: Square; // the pawn that double-stepped
   capturer: Army;
   setOnTurn: number;
 }
 
 export interface ChessState {
+  variant: Variant;
   board: (Piece | null)[];
   castling: Castling;
   ep: EnPassant | null;
@@ -53,7 +54,6 @@ export type Phase =
 export interface Effects {
   frozen: { pieceId: string; army: Army }[];
   shields: { pieceId: string; owner: PlayerId }[];
-  pendingSkip: PlayerId | null;
 }
 
 export interface GameEvent {
@@ -62,11 +62,21 @@ export interface GameEvent {
   text: string; // public text only
 }
 
+/** The card most recently played, kept even after the discard pile is reshuffled. */
+export interface LastPlayed {
+  player: PlayerId;
+  card: Card;
+  asOne: boolean;
+}
+
 export interface GameState {
+  variant: Variant;
   chess: ChessState;
-  captured: { w: PieceType[]; b: PieceType[] }; // pieces OF that army that were captured
-  players: [PlayerId, PlayerId]; // [initial white, initial black]
-  seats: { w: PlayerId; b: PlayerId };
+  captured: Record<Army, PieceType[]>; // pieces OF that army that were captured
+  players: PlayerId[]; // clockwise; the first moves first
+  seats: Partial<Record<Army, PlayerId>>;
+  eliminated: PlayerId[];
+  checkmated?: PlayerId[]; // eliminated by checkmate (not resignation); they may see everyone's hands
   hands: Record<PlayerId, Card[]>;
   drawPile: Card[];
   discardPile: Card[];
@@ -77,6 +87,7 @@ export interface GameState {
   effects: Effects;
   nextPieceId: number;
   log: GameEvent[];
+  lastPlayed?: LastPlayed;
 }
 
 export type EffectArgs =
@@ -93,7 +104,7 @@ export interface JokerChoice {
 }
 
 export type Action =
-  | { type: 'playCard'; cardId: string; asOne?: boolean; joker?: JokerChoice; args?: EffectArgs }
+  | { type: 'playCard'; cardId: string; asOne?: boolean; joker?: JokerChoice; args?: EffectArgs; target?: PlayerId }
   | { type: 'move'; from: Square; to: Square; promotion?: PromotionType }
   | { type: 'doneMoving' }
   | { type: 'resign' };

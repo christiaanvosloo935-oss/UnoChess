@@ -3,7 +3,7 @@ import {
   START_FEN, apply, legalSwaps, legalShieldTargets, legalFreezeTargets, playableCards, armyOf,
   type Action, type GameState,
 } from '../src/index.js';
-import { card, num, rest, sq, stateFrom } from './helpers.js';
+import { card, num, sq, stateFrom, rest } from './helpers.js';
 
 function ok(state: GameState, player: string, action: Action): GameState {
   const r = apply(state, player, action);
@@ -83,7 +83,7 @@ describe('6 · Swap and frozen pieces', () => {
     const king = idAt(base, 'e8');
     const rook = idAt(base, 'h7');
     expect(pairHas(legalSwaps(base, 'B'), pawn, king)).toBe(true);
-    const frozen: GameState = { ...base, effects: { frozen: [{ pieceId: pawn, army: 'b' }], shields: [], pendingSkip: null } };
+    const frozen: GameState = { ...base, effects: { frozen: [{ pieceId: pawn, army: 'b' }], shields: [] } };
     const pairs = legalSwaps(frozen, 'B');
     expect(pairs.some(([a, b]) => a === pawn || b === pawn)).toBe(false);
     expect(pairHas(pairs, king, rook)).toBe(true);
@@ -110,23 +110,6 @@ describe('7 · Freeze', () => {
     expect(s.chess.board[sq('d4')]).toMatchObject({ type: 'q' });
   });
 
-  it('a freeze survives a skipped turn (§5.11)', () => {
-    const zero1 = rest();
-    const zero2 = rest();
-    const b1 = num(1);
-    const base = stateFrom('4k3/8/8/3q4/8/8/8/4K3 w - - 0 1', { w: [zero1, zero2], b: [b1] });
-    let s: GameState = {
-      ...base,
-      effects: { frozen: [{ pieceId: idAt(base, 'd5'), army: 'b' }], shields: [], pendingSkip: 'B' },
-    };
-    s = ok(s, 'A', play(zero1));
-    expect(s.current).toBe('A');
-    expect(s.effects.frozen).toHaveLength(1);
-    s = ok(s, 'A', play(zero2));
-    s = ok(s, 'B', { type: 'playCard', cardId: b1.id });
-    expect(fail(s, 'B', mv('d5', 'd4'))).toMatch(/frozen/);
-  });
-
   it('can target a king', () => {
     const s = stateFrom(START_FEN, { w: [num(7)] });
     expect(legalFreezeTargets(s, 'A')).toHaveLength(16);
@@ -147,16 +130,6 @@ describe('Skip · Shield', () => {
     expect(fail(s, 'B', mv('d8', 'd2'))).toMatch(/legal/);
     s = ok(s, 'B', mv('e8', 'e7'));
     expect(s.effects.shields).toEqual([]);
-  });
-
-  it('expires at the start of a skipped turn too (§5.12)', () => {
-    const shield = card('skip');
-    const d2 = card('draw2');
-    let s = stateFrom(FEN, { w: [shield], b: [d2] });
-    s = ok(s, 'A', play(shield, { type: 'shield', pieceId: idAt(s, 'd2') }));
-    s = ok(s, 'B', play(d2));
-    expect(s.effects.shields).toEqual([]);
-    expect(s.current).toBe('B');
   });
 
   it('cannot target the king', () => {
@@ -181,23 +154,24 @@ describe('9 · Trade Hands', () => {
     const ys = [num(3), num(4), num(5), num(1)];
     const s = stateFrom(START_FEN, { w: [nine, x1, x2], b: ys });
     const after = ok(s, 'A', play(nine));
-    expect(after.hands.B.map((c) => c.id)).toEqual([x1.id, x2.id]);
+    expect(after.hands.B.slice(0, 2).map((c) => c.id)).toEqual([x1.id, x2.id]);
+    expect(after.hands.B).toHaveLength(7); // topped up to 7 after the swap
     const mine = after.hands.A.map((c) => c.id);
     for (const y of ys) expect(mine).toContain(y.id);
     expect(mine).not.toContain(nine.id);
-    expect(mine).toHaveLength(5);
+    expect(mine).toHaveLength(7);
   });
 });
 
 describe('9 · Trade Hands with an empty result', () => {
-  it('a player who is left with no cards draws one at the start of their turn', () => {
+  it('a player who is left with no cards is topped up to 7 straight away', () => {
     const nine = num(9);
     const s = stateFrom(START_FEN, { w: [nine], b: [num(1), num(2), num(3)] });
     const after = ok(s, 'A', play(nine));
     expect(after.current).toBe('B');
-    expect(after.hands.A).toHaveLength(4);
-    expect(after.hands.B).toHaveLength(1);
-    expect(playableCards(after, 'B')).toHaveLength(1);
+    expect(after.hands.A).toHaveLength(7);
+    expect(after.hands.B).toHaveLength(7);
+    expect(playableCards(after, 'B')).toHaveLength(7);
   });
 
   it('even a hand traded down to nothing never leaves the player without a card', () => {
@@ -223,48 +197,5 @@ describe('Reverse', () => {
     s = ok(s, 'B', mv('e2', 'e4'));
     expect(s.chess.board[sq('e4')]).toMatchObject({ army: 'w' });
     expect(s.current).toBe('A');
-  });
-});
-
-describe('Draw Two / Wild Draw Four', () => {
-  it('draw2: opponent gets +2, is skipped, and the player goes again', () => {
-    const d2 = card('draw2');
-    const s = stateFrom(START_FEN, { w: [d2, rest()], b: [num(1)] });
-    const after = ok(s, 'A', play(d2));
-    expect(after.hands.B).toHaveLength(3);
-    expect(after.current).toBe('A');
-    expect(after.turn).toBe(3);
-    expect(after.effects.pendingSkip).toBeNull();
-  });
-
-  it('wild4: opponent gets +4 and is skipped', () => {
-    const w4 = card('wild4');
-    const s = stateFrom(START_FEN, { w: [w4, rest()], b: [num(1)] });
-    const after = ok(s, 'A', play(w4));
-    expect(after.hands.B).toHaveLength(5);
-    expect(after.current).toBe('A');
-  });
-
-  it('a hand over 7 plays one card per turn and only draws once below 7 (§5.9)', () => {
-    const bHand = Array.from({ length: 11 }, () => rest());
-    const aHand = Array.from({ length: 7 }, () => rest());
-    let s = stateFrom(START_FEN, { w: aHand, b: bHand }, { current: 'B' });
-    s = { ...s, chess: stateFrom('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkq - 0 1').chess };
-    const sizes: number[] = [];
-    for (let i = 0; i < 5; i++) {
-      s = ok(s, 'B', { type: 'playCard', cardId: s.hands.B[0].id });
-      sizes.push(s.hands.B.length);
-      s = ok(s, 'A', { type: 'playCard', cardId: s.hands.A[0].id });
-    }
-    expect(sizes).toEqual([10, 9, 8, 7, 7]);
-  });
-
-  it('when both piles are exhausted the opponent draws what exists and play continues', () => {
-    const w4 = card('wild4');
-    const s = stateFrom(START_FEN, { w: [w4, rest()], b: [num(1)] }, { drawPile: [], discardPile: [] });
-    const after = ok(s, 'A', play(w4));
-    expect(after.hands.B).toHaveLength(1);
-    expect(after.current).toBe('A');
-    expect(after.phase).toEqual({ kind: 'awaitingCard' });
   });
 });

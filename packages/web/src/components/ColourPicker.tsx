@@ -4,7 +4,7 @@ import { COLOUR_HEX, PIECE_COLOURS } from '../pieceColours';
 interface Props {
   value: PieceColour;
   onChange: (colour: PieceColour) => void;
-  taken?: PieceColour; // already used by the other player
+  taken?: PieceColour[]; // already used by the other players
 }
 
 export function ColourPicker({ value, onChange, taken }: Props) {
@@ -19,8 +19,8 @@ export function ColourPicker({ value, onChange, taken }: Props) {
             role="radio"
             aria-checked={value === c}
             aria-label={c}
-            title={c === taken ? `${c} (your opponent has this)` : c}
-            disabled={c === taken}
+            title={taken?.includes(c) ? `${c} (already taken)` : c}
+            disabled={taken?.includes(c)}
             className={`swatch${value === c ? ' chosen' : ''}`}
             style={{ background: COLOUR_HEX[c] }}
             onClick={() => onChange(c)}

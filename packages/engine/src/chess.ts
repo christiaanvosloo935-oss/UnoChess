@@ -1,21 +1,13 @@
+import { enemiesOf, geometryFor, type Variant } from './geometry.js';
 import type { Army, Castling, ChessState, Move, Piece, PieceType, Square } from './types.js';
 
 export interface MoveContext {
   frozen?: ReadonlySet<string>; // piece ids that may not move
   shielded?: ReadonlySet<string>; // piece ids that may not be captured
-  moved?: ReadonlySet<string>; // piece ids already moved this card (rule B)
+  moved?: ReadonlySet<string>; // piece ids that used up their moves this card (rule B: two moves each)
   turn?: number; // en passant needs ep.setOnTurn === turn - 1; omitted: ep usable
 }
 
-const KNIGHT = [[1, 2], [2, 1], [2, -1], [1, -2], [-1, -2], [-2, -1], [-2, 1], [-1, 2]];
-const KING = [[1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1], [1, -1]];
-const DIAG = [[1, 1], [1, -1], [-1, 1], [-1, -1]];
-const ORTH = [[1, 0], [-1, 0], [0, 1], [0, -1]];
-
-const fileOf = (sq: Square) => sq & 7;
-const rankOf = (sq: Square) => sq >> 3;
-const inBoard = (f: number, r: number) => f >= 0 && f < 8 && r >= 0 && r < 8;
-const other = (a: Army): Army => (a === 'w' ? 'b' : 'w');
 
 export function findKing(chess: ChessState, army: Army): Square {
   return chess.board.findIndex((p) => p?.type === 'k' && p.army === army);
@@ -23,44 +15,41 @@ export function findKing(chess: ChessState, army: Army): Square {
 
 export function isSquareAttacked(chess: ChessState, target: Square, by: Army): boolean {
   const { board } = chess;
-  const tf = fileOf(target);
-  const tr = rankOf(target);
-  const at = (f: number, r: number): Piece | null => (inBoard(f, r) ? board[r * 8 + f] : null);
-  const dir = by === 'w' ? 1 : -1;
-  for (const df of [-1, 1]) {
-    const p = at(tf + df, tr - dir);
+  const geo = geometryFor(chess.variant);
+  for (const from of geo.pawnAttackersOf(by, target)) {
+    const p = board[from];
     if (p && p.army === by && p.type === 'p') return true;
   }
-  for (const [df, dr] of KNIGHT) {
-    const p = at(tf + df, tr + dr);
+  for (const from of geo.knightJumps[target]) {
+    const p = board[from];
     if (p && p.army === by && p.type === 'n') return true;
   }
-  for (const [df, dr] of KING) {
-    const p = at(tf + df, tr + dr);
+  for (const from of geo.kingSteps[target]) {
+    const p = board[from];
     if (p && p.army === by && p.type === 'k') return true;
   }
-  const ray = (dirs: number[][], types: PieceType[]) => {
-    for (const [df, dr] of dirs) {
-      let f = tf + df;
-      let r = tr + dr;
-      while (inBoard(f, r)) {
-        const p = board[r * 8 + f];
+  const ray = (rays: Square[][], types: PieceType[]) => {
+    for (const r of rays) {
+      for (const sq of r) {
+        const p = board[sq];
         if (p) {
           if (p.army === by && types.includes(p.type)) return true;
           break;
         }
-        f += df;
-        r += dr;
       }
     }
     return false;
   };
-  return ray(ORTH, ['r', 'q']) || ray(DIAG, ['b', 'q']);
+  return ray(geo.orthRays[target], ['r', 'q']) || ray(geo.diagRays[target], ['b', 'q']);
+}
+
+function attackedByAny(chess: ChessState, target: Square, by: readonly Army[]): boolean {
+  return by.some((a) => isSquareAttacked(chess, target, a));
 }
 
 export function isInCheck(chess: ChessState, army: Army): boolean {
   const k = findKing(chess, army);
-  return k >= 0 && isSquareAttacked(chess, k, other(army));
+  return k >= 0 && attackedByAny(chess, k, enemiesOf(chess.variant, army));
 }
 
 interface GenOpts {
@@ -80,16 +69,14 @@ function pseudoMoves(
   if (!piece) return [];
   if (ctx.frozen?.has(piece.id) || ctx.moved?.has(piece.id)) return [];
   const army = piece.army;
-  const ff = fileOf(from);
-  const fr = rankOf(from);
-  const lastRank = army === 'w' ? 7 : 0;
+  const geo = geometryFor(chess.variant);
   const out: Move[] = [];
   const tag = asType !== piece.type ? { as: asType } : {};
 
   const canLand = (t: Piece | null) =>
     !t || (t.army !== army && t.type !== 'k' && !ctx.shielded?.has(t.id));
   const add = (to: Square, extra: Partial<Move> = {}) => {
-    if (piece.type === 'p' && rankOf(to) === lastRank) {
+    if (piece.type === 'p' && geo.isPromotionSquare(army, to)) {
       for (const promotion of ['q', 'r', 'b', 'n'] as const) {
         out.push({ from, to, promotion, ...tag, ...extra });
       }
@@ -99,67 +86,57 @@ function pseudoMoves(
   };
 
   if (asType === 'n' || asType === 'k') {
-    for (const [df, dr] of asType === 'n' ? KNIGHT : KING) {
-      const f = ff + df;
-      const r = fr + dr;
-      if (inBoard(f, r) && canLand(board[r * 8 + f])) add(r * 8 + f);
+    for (const to of asType === 'n' ? geo.knightJumps[from] : geo.kingSteps[from]) {
+      if (canLand(board[to])) add(to);
     }
   } else if (asType === 'b' || asType === 'r' || asType === 'q') {
-    const dirs = asType === 'b' ? DIAG : asType === 'r' ? ORTH : [...ORTH, ...DIAG];
-    for (const [df, dr] of dirs) {
-      let f = ff + df;
-      let r = fr + dr;
-      while (inBoard(f, r)) {
-        const t = board[r * 8 + f];
-        if (!t) add(r * 8 + f);
+    const rays =
+      asType === 'b' ? geo.diagRays[from] : asType === 'r' ? geo.orthRays[from] : [...geo.orthRays[from], ...geo.diagRays[from]];
+    for (const ray of rays) {
+      for (const to of ray) {
+        const t = board[to];
+        if (!t) add(to);
         else {
-          if (canLand(t)) add(r * 8 + f);
+          if (canLand(t)) add(to);
           break;
         }
-        f += df;
-        r += dr;
       }
     }
   } else {
-    const dir = army === 'w' ? 1 : -1;
-    const startRank = army === 'w' ? 1 : 6;
-    if (inBoard(ff, fr + dir) && !board[(fr + dir) * 8 + ff]) {
-      add((fr + dir) * 8 + ff);
-      if (fr === startRank && !board[(fr + 2 * dir) * 8 + ff]) add((fr + 2 * dir) * 8 + ff);
+    const push = geo.pawnPush(army, from);
+    if (push !== null && !board[push]) {
+      add(push);
+      const dbl = geo.pawnDouble(army, from);
+      if (dbl !== null && !board[dbl]) add(dbl);
     }
-    for (const df of [-1, 1]) {
-      const f = ff + df;
-      const r = fr + dir;
-      if (!inBoard(f, r)) continue;
-      const to = r * 8 + f;
+    for (const to of geo.pawnCaptures(army, from)) {
       const t = board[to];
       if (t && canLand(t)) add(to);
       else if (
         !t && opts.allowEp && chess.ep && chess.ep.square === to && chess.ep.capturer === army &&
         (ctx.turn === undefined || chess.ep.setOnTurn === ctx.turn - 1)
       ) {
-        const victim = board[fr * 8 + f];
+        const victim = board[chess.ep.victim];
         if (victim && victim.type === 'p' && !ctx.shielded?.has(victim.id)) add(to, { enPassant: true });
       }
     }
   }
 
-  if (opts.allowCastle && asType === 'k' && piece.type === 'k') {
-    const homeRank = army === 'w' ? 0 : 7;
-    const enemy = other(army);
-    if (from === homeRank * 8 + 4 && !isSquareAttacked(chess, from, enemy)) {
+  const castle = geo.castling(army);
+  if (opts.allowCastle && asType === 'k' && piece.type === 'k' && castle && from === castle.kingFrom) {
+    const enemies = enemiesOf(chess.variant, army);
+    if (!attackedByAny(chess, from, enemies)) {
       const rights = chess.castling[army];
-      const rookOk = (sq: Square) => {
-        const r = board[sq];
-        return !!r && r.type === 'r' && r.army === army && !ctx.frozen?.has(r.id) && !ctx.moved?.has(r.id);
-      };
-      const free = (...files: number[]) => files.every((f) => !board[homeRank * 8 + f]);
-      const safe = (...files: number[]) => files.every((f) => !isSquareAttacked(chess, homeRank * 8 + f, enemy));
-      if (rights.k && rookOk(homeRank * 8 + 7) && free(5, 6) && safe(5, 6)) {
-        out.push({ from, to: homeRank * 8 + 6, castle: 'k' });
-      }
-      if (rights.q && rookOk(homeRank * 8) && free(1, 2, 3) && safe(2, 3)) {
-        out.push({ from, to: homeRank * 8 + 2, castle: 'q' });
+      for (const side of ['k', 'q'] as const) {
+        const c = castle[side];
+        const rook = board[c.rookFrom];
+        const rookOk = !!rook && rook.type === 'r' && rook.army === army && !ctx.frozen?.has(rook.id) && !ctx.moved?.has(rook.id);
+        if (
+          rights[side] && rookOk && c.empty.every((s) => !board[s]) &&
+          c.safe.every((s) => !attackedByAny(chess, s, enemies))
+        ) {
+          out.push({ from, to: c.kingTo, castle: side });
+        }
       }
     }
   }
@@ -167,15 +144,17 @@ function pseudoMoves(
 }
 
 /** Castling rights lost because a piece left or landed on any of these squares. */
-export function revokeCastling(rights: Castling, ...squares: Square[]): Castling {
-  const out = { w: { ...rights.w }, b: { ...rights.b } };
+export function revokeCastling(variant: Variant, rights: Castling, ...squares: Square[]): Castling {
+  const geo = geometryFor(variant);
+  const out = { w: { ...rights.w }, r: { ...rights.r }, b: { ...rights.b } };
   for (const sq of squares) {
-    if (sq === 4) out.w = { k: false, q: false };
-    else if (sq === 60) out.b = { k: false, q: false };
-    else if (sq === 0) out.w.q = false;
-    else if (sq === 7) out.w.k = false;
-    else if (sq === 56) out.b.q = false;
-    else if (sq === 63) out.b.k = false;
+    for (const army of geo.armies) {
+      const c = geo.castling(army);
+      if (!c) continue;
+      if (sq === c.kingFrom) out[army] = { k: false, q: false };
+      else if (sq === c.k.rookFrom) out[army].k = false;
+      else if (sq === c.q.rookFrom) out[army].q = false;
+    }
   }
   return out;
 }
@@ -184,36 +163,37 @@ export function applyChessMove(
   chess: ChessState,
   move: Move,
   turn: number,
+  nextMover?: Army,
 ): { chess: ChessState; captured: Piece | null } {
+  const geo = geometryFor(chess.variant);
   const board = chess.board.slice();
   const piece = board[move.from]!;
   const army = piece.army;
   let captured: Piece | null = board[move.to];
   board[move.from] = null;
-  if (move.enPassant) {
-    const victimSq = rankOf(move.from) * 8 + fileOf(move.to);
-    captured = board[victimSq];
-    board[victimSq] = null;
+  if (move.enPassant && chess.ep) {
+    captured = board[chess.ep.victim];
+    board[chess.ep.victim] = null;
   }
   board[move.to] = move.promotion ? { ...piece, type: move.promotion } : piece;
   if (move.castle) {
-    const rank = rankOf(move.from);
-    const [rookFrom, rookTo] = move.castle === 'k' ? [rank * 8 + 7, rank * 8 + 5] : [rank * 8, rank * 8 + 3];
-    board[rookTo] = board[rookFrom];
-    board[rookFrom] = null;
+    const side = geo.castling(army)![move.castle];
+    board[side.rookTo] = board[side.rookFrom];
+    board[side.rookFrom] = null;
   }
 
-  const castling = revokeCastling(chess.castling, move.from, move.to);
+  const castling = revokeCastling(chess.variant, chess.castling, move.from, move.to);
 
   let ep: ChessState['ep'] = null;
-  if (piece.type === 'p' && move.as === undefined && Math.abs(rankOf(move.to) - rankOf(move.from)) === 2) {
+  if (piece.type === 'p' && move.as === undefined && geo.pawnDouble(army, move.from) === move.to) {
     ep = {
-      square: ((rankOf(move.from) + rankOf(move.to)) / 2) * 8 + fileOf(move.from),
-      capturer: other(army),
+      square: geo.pawnPush(army, move.from)!,
+      victim: move.to,
+      capturer: nextMover ?? geo.armies[(geo.armies.indexOf(army) + 1) % geo.armies.length],
       setOnTurn: turn,
     };
   }
-  return { chess: { board, castling, ep }, captured };
+  return { chess: { variant: chess.variant, board, castling, ep }, captured };
 }
 
 function leavesKingSafe(chess: ChessState, move: Move, army: Army, turn: number): boolean {

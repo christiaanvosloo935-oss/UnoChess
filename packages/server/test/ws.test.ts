@@ -20,15 +20,26 @@ afterEach(async () => {
 /** A seed whose white opening hand holds a 2–5 move card. */
 function findSeed(): number {
   for (let seed = 1; seed < 1000; seed++) {
-    const g = createGame(seed, 'w', 'b');
+    const g = createGame(seed, ['w', 'b']);
     if (g.hands.w.some((c) => c.kind === 'num' && c.value! >= 2 && c.value! <= 5)) return seed;
   }
   throw new Error('no seed');
 }
 const SEED = findSeed();
 
-async function boot(opts: { staticDir?: string } = {}): Promise<Started> {
-  const s = await start(0, { seed: () => SEED, ...opts });
+/** A seed whose first three-player hand holds a 2–5 move card. */
+function findThreeSeed(): number {
+  for (let seed = 1; seed < 1000; seed++) {
+    const g = createGame(seed, ['a', 'b', 'c'], 'three');
+    if (g.hands.a.some((c) => c.kind === 'num' && c.value! >= 2 && c.value! <= 5)) return seed;
+  }
+  throw new Error('no seed');
+}
+const THREE_SEED = findThreeSeed();
+
+async function boot(opts: { staticDir?: string; seed?: number } = {}): Promise<Started> {
+  const { seed = SEED, ...rest } = opts;
+  const s = await start(0, { seed: () => seed, ...rest });
   running.push(s);
   return s;
 }
@@ -65,11 +76,11 @@ class Client {
   }
 }
 
-async function createViaHttp(port: number, nickname = 'Alice') {
+async function createViaHttp(port: number, nickname = 'Alice', variant?: unknown) {
   const res = await fetch(`http://localhost:${port}/api/games`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ nickname }),
+    body: JSON.stringify({ nickname, variant }),
   });
   return { status: res.status, body: (await res.json()) as { gameId: string; seatToken: string; playerId: string } };
 }
@@ -86,6 +97,20 @@ async function startGame(port: number) {
   await a.view();
   await b.view();
   return { a, b, ...body };
+}
+
+async function startThreeGame(port: number) {
+  const { body } = await createViaHttp(port, 'Alice', 'three');
+  const a = await Client.connect(port);
+  a.send({ type: 'join', gameId: body.gameId, nickname: 'Alice', seatToken: body.seatToken });
+  await a.waitFor((m) => m.type === 'lobby');
+  const b = await Client.connect(port);
+  b.send({ type: 'join', gameId: body.gameId, nickname: 'Bob' });
+  await b.waitFor((m) => m.type === 'lobby' && m.needed === 1);
+  const c = await Client.connect(port);
+  c.send({ type: 'join', gameId: body.gameId, nickname: 'Carol' });
+  await Promise.all([a.view(), b.view(), c.view()]);
+  return { a, b, c, ...body };
 }
 
 /** The seat token of the n-th seat, read straight from the room (tests only). */
@@ -249,6 +274,47 @@ describe('websocket game', () => {
     await b.view((v) => v.phase.kind === 'moving');
   });
 
+  it('three simulated clients play a few cards on the hex board', async () => {
+    const server = await boot({ seed: THREE_SEED });
+    const { a, b, c } = await startThreeGame(server.port);
+    const first = await a.view((v) => v.options.cards.length > 0);
+    expect(first.variant).toBe('three');
+    expect(first.opponents).toHaveLength(2);
+    const card = first.hand.find((x) => x.kind === 'num' && x.value! >= 2 && x.value! <= 5)!;
+    a.send(action({ type: 'playCard', cardId: card.id }));
+    const moving = await a.view((v) => v.phase.kind === 'moving' && v.options.moves.length > 0);
+    const mv = moving.options.moves[0];
+    a.send(action({ type: 'move', from: mv.from, to: mv.to }));
+    await a.view((v) => v.phase.kind === 'moving' && v.phase.moved.length === 1);
+    a.send(action({ type: 'doneMoving' }));
+    const [va, vb, vc] = await Promise.all([a, b, c].map((cl) => cl.view((v) => v.turn === 2)));
+    expect(vb.current).toBe(vb.you);
+    expect(va.current).toBe(vb.you);
+    expect(vc.current).toBe(vb.you);
+    expect(vb.options.cards.length).toBeGreaterThan(0);
+    expect(vc.options.cards).toEqual([]);
+  });
+
+  it('no client ever receives another client’s hand ids or the draw pile', async () => {
+    const server = await boot({ seed: THREE_SEED });
+    const { a, b, c, gameId } = await startThreeGame(server.port);
+    await playMoveCard(a);
+    await a.view((v) => v.phase.kind === 'moving');
+    const room = server.rooms.get(gameId)!;
+    const state = room.state!;
+    expect(state.drawPile.length).toBeGreaterThan(0);
+    const clients = [a, b, c];
+    const seats = room.seats;
+    clients.forEach((client, i) => {
+      const raw = JSON.stringify(client.messages);
+      for (const [j, seat] of seats.entries()) {
+        if (j === i) continue;
+        for (const card of state.hands[seat.playerId]) expect(raw).not.toContain(`"${card.id}"`);
+      }
+      for (const card of state.drawPile) expect(raw).not.toContain(`"${card.id}"`);
+    });
+  });
+
   it('tells a third visitor the game is full and an unknown link it does not exist', async () => {
     const server = await boot();
     const { gameId } = await startGame(server.port);
@@ -263,12 +329,13 @@ describe('websocket game', () => {
   it('shows the opponent as disconnected and connected again', async () => {
     const server = await boot();
     const { a, b } = await startGame(server.port);
-    const joined = await a.waitFor<Extract<ServerMessage, { type: 'state' }>>((m) => m.type === 'state' && m.room.opponentConnected);
-    expect(joined.room.opponentConnected).toBe(true);
+    const oppId = (await a.view()).opponents[0].id;
+    const joined = await a.waitFor<Extract<ServerMessage, { type: 'state' }>>((m) => m.type === 'state' && m.room.connected[oppId]);
+    expect(joined.room.connected[oppId]).toBe(true);
     const before = a.messages.length;
     b.ws.close();
-    const gone = await a.waitFor<Extract<ServerMessage, { type: 'state' }>>((m) => m.type === 'state' && !m.room.opponentConnected, before);
-    expect(gone.room.opponentConnected).toBe(false);
+    const gone = await a.waitFor<Extract<ServerMessage, { type: 'state' }>>((m) => m.type === 'state' && !m.room.connected[oppId], before);
+    expect(gone.room.connected[oppId]).toBe(false);
   });
 });
 
@@ -311,6 +378,21 @@ describe('http', () => {
       });
       expect(res.status).toBe(400);
     }
+  });
+
+  it('POST /api/games rejects an unknown variant with 400', async () => {
+    const server = await boot();
+    for (const variant of ['four', 3, null, '']) {
+      const res = await fetch(`http://localhost:${server.port}/api/games`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ nickname: 'Alice', variant }),
+      });
+      expect(res.status).toBe(400);
+      expect(await res.json()).toEqual({ error: expect.any(String) });
+    }
+    expect((await createViaHttp(server.port, 'Alice', 'classic')).status).toBe(200);
+    expect((await createViaHttp(server.port, 'Alice', 'three')).status).toBe(200);
   });
 
   it('serves static files with an SPA fallback and no path traversal', async () => {

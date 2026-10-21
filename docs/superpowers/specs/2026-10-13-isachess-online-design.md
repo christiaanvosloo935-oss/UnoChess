@@ -2,6 +2,9 @@
 
 **Date:** 2026-10-13
 **Status:** Approved in conversation, awaiting written-spec review
+
+Three-player mode extends this spec: see 2026-10-15-three-player-design.md.
+
 **Source rules:** *IsaChess — House Rules, v1.0* (Christiaan, October 2026)
 
 ## 1. Goal
@@ -59,7 +62,7 @@ packages/
    - a short event log
 4. **Playing a card.** Click a card, then follow the prompts for its effect:
    - Move cards (1–5): legal destination squares are highlighted, with a counter of
-     moves left. Pieces that have already moved this turn are greyed out.
+     moves left. Pieces that have used both of their moves this turn are greyed out.
      A **Done moving** button ends the turn early.
    - 6 Swap: pick two of your pieces.
    - 7 Freeze: pick an enemy piece.
@@ -78,8 +81,10 @@ packages/
 ## 4. Rules (from the rulebook)
 
 **Setup.** Standard chessboard and pieces in the normal starting position. A standard
-108-card deck: one 0 per colour, two each of 1–9 per colour, two Skip, two Reverse
-and two Draw Two per colour, four Wild and four Wild Draw Four. Each player draws 7.
+114-card deck: one 0 per colour, two each of 1–9 per colour, two Skip, two Reverse
+and two Draw Two per colour, four Wild and four Wild Draw Four, plus six extra move
+cards (one extra each of 1, 2, 4 and 5 and two extra 3s, so there are 46 cards numbered
+1–5 instead of 40). Each player draws 7.
 The rest is the draw pile. White goes first.
 
 **Turn.** PLAY one card (colour and number never matter) → ACT (carry out its effect) →
@@ -95,13 +100,13 @@ DRAW (see §5.7).
 | 9 · Trade Hands | Swap whole hands with your opponent. |
 | Shield | One of your pieces (not the king) can't be captured until the start of your next turn. No moves this turn. A shielded piece can still be frozen or swapped. |
 | Switch Sides | Players swap armies; each keeps their own hand. |
-| Draw Two | Opponent draws 2 and skips their next turn. |
+| Draw Two | You draw 2 extra cards. Your turn then ends; the next player moves as normal (nobody is skipped). |
 | Revive | Return one of your captured pieces to any empty square in your first two rows (pawns allowed on the first row). It may not give check. Only a captured pawn may return as a queen; everything else returns as itself. No effect if nothing has been captured. |
-| Draw Four | Opponent draws 4 and skips their next turn. |
+| Draw Four | You draw 4 extra cards. Your turn then ends; the next player moves as normal (nobody is skipped). |
 
 **Multi-move rules (cards 1–5).**
 - A. Check ends your turn: the moment you give check, remaining moves are lost.
-- B. Each piece moves at most once per card.
+- B. Each piece moves at most twice per card.
 - C. If you start your turn in check, your first move must get out of check.
 
 **Winning.** Checkmate wins. Running out of cards never ends the game.
@@ -129,7 +134,7 @@ engine and every one gets a test.
    player B moves next, controlling A's old army. Reverse makes no chess move. Castling
    rights, captured pieces and effects belong to the *armies*, not the players.
 5. **Castling, en passant and promotion** follow normal chess. Castling counts as the
-   king's one move under rule B, and that rook may not move again on the same card.
+   king's one move and that rook's one move under rule B (each may still move once more on the same card).
 6. **Swap and Revive** may not give check, and may not leave your own king in check.
 7. **Shapeshift.** The piece moves as any other piece type for this one move, then is
    itself again.
@@ -142,22 +147,24 @@ engine and every one gets a test.
 8. **Promotion.** A real pawn that ends any move on the last rank always promotes,
    however it got there (normal move or Shapeshift). A non-pawn moving *as* a pawn
    onto the last rank doesn't promote.
-9. **Draw Two / Draw Four** with a hand over 7. The penalised player draws all the cards.
+9. **Draw Two / Draw Four** are drawn by the player who plays them, so their hand grows past 7.
    On later turns they still play exactly one card per turn and **don't draw** while their
-   hand has 7 or more cards. Once it's below 7 after playing, they draw 1 as normal.
-   Precisely: at the end of the DRAW step, draw 1 if the hand has fewer than 7 cards.
-10. **Skipped turns.** After a Draw Two or Draw Four, the player who played it takes the
-    next turn.
+   hand has 7 or more cards. Once it's below 7 after playing, they are topped up to 7.
+   Precisely: at the end of every card, each player still in the game with fewer than 7 cards
+   draws until they hold 7 (as far as the draw pile and the reshuffled discard pile allow),
+   starting with the player who played, then clockwise. Nobody holds fewer than 7 cards otherwise.
+10. **No skipped turns.** After a Draw Two or Draw Four the turn simply passes to the next
+    player. (In the three-player game a stalemated player's turn is still skipped.)
 11. **Freeze timing.** A freeze applies to the frozen army's next turn that is actually
-    *played*. If that turn is skipped, the freeze carries to the following played turn.
-12. **Shield timing.** It ends at the start of the shielding player's next turn,
-    whether that is a played turn or a skipped one.
+    *played*. If that turn is skipped (a stalemate skip in the three-player game), the freeze
+    carries to the following played turn.
+12. **Shield timing.** It ends at the start of the shielding player's next turn.
 13. **Stalemate.** If the player to move isn't in check and their army has no legal
     ordinary chess move, the game is drawn. Holding only "useless" cards isn't a
     stalemate: such a player can always play a card.
 14. **Multi-move stopping early.** A player may end a 1–5 card turn early with
     **Done moving** at any point, even before the first move. The exception is rule C: when
-    in check, the first (escaping) move is required. If no legal move remains for any unmoved piece, the turn ends
+    in check, the first (escaping) move is required. If no legal move remains for any piece that still has a move left, the turn ends
     automatically.
 15. **Resign.** Either player may resign at any time. The opponent wins.
 
@@ -175,8 +182,7 @@ engine and every one gets a test.
   - `resolving` (a card in progress: moves left, IDs of pieces already moved, whether
     it was played as a "1")
   - `over` (result and reason)
-- `effects`: frozen `{pieceId, army, remainingPlayedTurns}`, shields `{pieceId, expiresAtStartOfTurnOf}`,
-  and `pendingSkip` for a player.
+- `effects`: frozen `{pieceId, army, remainingPlayedTurns}` and shields `{pieceId, expiresAtStartOfTurnOf}`.
 - `rng`: a seeded generator so tests are reproducible.
 
 ### API
@@ -194,8 +200,8 @@ engine and every one gets a test.
 `revive {capturedIndex, square, asQueen?}` · `doneMoving` · `resign`
 
 ### Turn flow
-1. When a turn starts, expire shields and handle any skip. A skipped turn draws nothing:
-   the penalty cards were already drawn when the card was played.
+1. When a turn starts, expire shields. (A turn passed over without a card, such as a stalemate skip in
+   the three-player game, draws nothing.)
 2. `playCard` validates the card against §5.3 and either resolves immediately or enters
    `resolving`.
 3. After each move, the engine checks:
@@ -205,7 +211,7 @@ engine and every one gets a test.
 4. When the card ends:
    - discard it
    - run the DRAW step (§5.9)
-   - pass the turn to the next player, or back to the same player if a skip applies
+   - pass the turn to the next player
    - evaluate checkmate or stalemate for the player now to move (§5.2, §5.13)
 
 ## 7. Server design
@@ -250,7 +256,7 @@ engine and every one gets a test.
     - a boxed-in bishop leaping like a knight
     - a shielded queen on an open file
     - Revive's legal and illegal squares, including the square that would give check
-  - deck composition (108 cards) and the reshuffle when the draw pile is empty
+  - deck composition (114 cards) and the reshuffle when the draw pile is empty
 - **Server (Vitest):** two simulated clients play a scripted game over real WebSockets.
   Tests also check that neither ever receives the other's hand or the draw-pile order, and
   cover reconnecting with a seat token and rejecting a third visitor.

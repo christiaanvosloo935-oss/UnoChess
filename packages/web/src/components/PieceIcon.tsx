@@ -1,5 +1,6 @@
 import type { Army, PieceColour, PieceType } from '@isachess/engine';
 import { pieceSrc } from '../pieceColours';
+import { ARMY_NAME } from './ArmyName';
 import { PIECE_NAME } from './pieceNames';
 
 interface Props {
@@ -16,7 +17,7 @@ export function PieceIcon({ army, type, colour, className = '', pieceId }: Props
     <img
       className={`piece-img ${className}`.trim()}
       src={pieceSrc(army, type, colour)}
-      alt={`${colour ?? (army === 'w' ? 'white' : 'black')} ${PIECE_NAME[type].toLowerCase()}`}
+      alt={`${(colour ?? ARMY_NAME[army]).toLowerCase()} ${PIECE_NAME[type].toLowerCase()}`}
       draggable={false}
       data-piece-id={pieceId}
     />

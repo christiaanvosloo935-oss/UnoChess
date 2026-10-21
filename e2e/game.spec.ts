@@ -25,6 +25,7 @@ test('two players create, join, and play', async ({ browser }) => {
   await bob.getByTestId('join-game').click();
   await expect(status(alice)).toHaveText('Your turn: play a card');
   await expect(status(bob)).toHaveText("Alice's turn");
+  await expect(bob.getByTestId('last-played')).toHaveCount(0);
 
   // Chat reaches the other player, nicknames are shown, and nothing is rendered as HTML.
   await alice.getByTestId('chat-input').fill('hello <b>Bob</b>');
@@ -41,6 +42,7 @@ test('two players create, join, and play', async ({ browser }) => {
   await playMoveCard(alice, 'e2', 'e4');
   await expect(status(bob)).toHaveText('Your turn: play a card');
   await expect(square(bob, 'e4').locator('img')).toHaveAttribute('alt', 'white pawn');
+  await expect(bob.getByTestId('last-played')).toContainText('Alice played');
 
   // Bob (Black) answers with e7-e5.
   await playMoveCard(bob, 'e7', 'e5');
@@ -58,6 +60,10 @@ test('two players create, join, and play', async ({ browser }) => {
   await expect(square(alice, 'a1').locator('img')).toHaveAttribute('alt', knight!);
   await expect(square(alice, 'b1').locator('img')).toHaveAttribute('alt', rook!);
   await expect(status(bob)).toHaveText('Your turn: play a card');
+  // Bob can see which card Alice just used: the Swap card, with its picture.
+  await expect(bob.getByTestId('last-played')).toContainText('Alice played');
+  await expect(bob.getByTestId('last-played').locator('svg[data-testid="icon-swap"]').first()).toBeVisible();
+  await expect(alice.getByTestId('last-played')).toContainText('You played');
 
   // Refreshing keeps the seat, the hand and the board.
   const handBefore = await alice.locator('[data-testid=hand] button').count();
@@ -130,8 +136,8 @@ test('pieces slide, captures fade, and nothing is left behind', async ({ browser
   await expect(bob.getByTestId('chat-input')).toBeVisible();
   expect(await animCalls(bob, 'white pawn')).toBe(0); // the first state is not animated
 
-  // White plays e2-e4 and d2-d4 with the 4-move card; Black's page animates both slides.
-  await alice.locator('[data-testid=hand] button', { hasText: 'moves' }).first().click();
+  // White plays e2-e4 and d2-d4 with a 4-move card; Black's page animates both slides.
+  await alice.locator('[data-testid=hand] button', { hasText: '4 moves' }).first().click();
   await square(alice, 'e2').click();
   await square(alice, 'e4').click();
   await square(alice, 'd2').click();
@@ -143,14 +149,14 @@ test('pieces slide, captures fade, and nothing is left behind', async ({ browser
   await expect(square(bob, 'd4').locator('img')).toHaveAttribute('alt', 'white pawn');
   await expect(square(bob, 'e2').locator('img')).toHaveCount(0);
 
-  // Black answers e7-e5, then White captures d4xe5 with the 1-move card.
+  // Black answers e7-e5, then White captures d4xe5 with the second 4-move card.
   await expect(status(bob)).toHaveText('Your turn: play a card');
   await bob.locator('[data-testid=hand] button', { hasText: 'moves' }).first().click();
   await square(bob, 'e7').click();
   await square(bob, 'e5').click();
   await bob.getByTestId('done-moving').click();
   await expect(status(alice)).toHaveText('Your turn: play a card');
-  await alice.locator('[data-testid=hand] button', { hasText: '1 move' }).click();
+  await alice.locator('[data-testid=hand] button', { hasText: '4 moves' }).first().click();
   await square(alice, 'd4').click();
   await square(alice, 'e5').click();
   await expect.poll(() => bob.evaluate(() => (window as unknown as { __anim: { ghosts: number } }).__anim.ghosts)).toBe(1);
@@ -188,9 +194,9 @@ test('the card guide explains every card, marks the ones you hold, and keeps the
   await expect(alice.getByTestId('card-guide')).toBeVisible();
   await expect(alice.getByTestId('guide-entry')).toHaveCount(11);
   await expect(alice.getByTestId('guide-entry').filter({ hasText: 'Freeze' })).toContainText("can't move on their next turn");
-  // Seed 1 deals White: 6, 4, 7, 1, Reverse, +4, 8, so six different guide entries are marked as held.
-  await expect(alice.locator('[data-testid=guide-entry].held')).toHaveCount(6);
-  await expect(alice.getByTestId('guide-entry').filter({ hasText: 'Trade' })).not.toHaveClass(/held/);
+  // Seed 1 deals White: 6, 9, 2, 4, 4, Reverse, Skip, so five different guide entries are marked as held.
+  await expect(alice.locator('[data-testid=guide-entry].held')).toHaveCount(5);
+  await expect(alice.getByTestId('guide-entry').filter({ hasText: 'Freeze' })).not.toHaveClass(/held/);
   await expect(alice.getByTestId('chat-list')).toBeHidden();
 
   await alice.getByTestId('tab-chat').click();
@@ -273,4 +279,16 @@ test('the Shield card shows a real shield and the Revive card shows an R', async
   const revive = page.getByTestId('guide-entry').filter({ hasText: 'Revive' });
   await expect(revive.locator('.card .face')).toHaveText('R');
   await expect(revive.locator('.card .corner')).toHaveText('R');
+});
+
+test('the Swap, Freeze, Shapeshift and Trade Hands cards show pictures instead of numbers', async ({ page }) => {
+  await page.goto('/');
+  await page.getByTestId('home-guide').click();
+  const cases = [['Swap', 'swap', '6'], ['Freeze', 'freeze', '7'], ['Shapeshift', 'shapeshift', '8'], ['Trade Hands', 'trade', '9']];
+  for (const [title, icon, digit] of cases) {
+    const entry = page.getByTestId('guide-entry').filter({ hasText: `${digit} · ${title}` });
+    await expect(entry.locator(`svg[data-testid="icon-${icon}"]`)).toHaveCount(2); // corner and face
+    await expect(entry.locator('.card .face')).not.toContainText(digit);
+    await expect(entry.locator('.card .corner')).not.toContainText(digit);
+  }
 });

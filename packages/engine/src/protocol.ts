@@ -13,8 +13,8 @@ export type PieceColour = (typeof PIECE_COLOURS)[number];
 export interface RoomInfo {
   names: Record<PlayerId, string>;
   colours: Record<PlayerId, PieceColour>;
-  opponentConnected: boolean;
-  rematch: { you: boolean; opponent: boolean };
+  connected: Record<PlayerId, boolean>;
+  rematch: Record<PlayerId, boolean>;
 }
 
 export type ClientMessage =
@@ -25,7 +25,7 @@ export type ClientMessage =
 
 export type ServerMessage =
   | { type: 'joined'; gameId: string; seatToken: string; playerId: PlayerId }
-  | { type: 'lobby'; gameId: string; names: string[]; colours: PieceColour[] } // waiting for the second player
+  | { type: 'lobby'; gameId: string; names: string[]; colours: PieceColour[]; needed: number } // waiting for players; `needed` seats still empty
   | { type: 'state'; view: PlayerView; room: RoomInfo }
   | { type: 'chat'; message: ChatMessage }
   | { type: 'error'; message: string }

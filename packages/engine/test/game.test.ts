@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { START_FEN, createGame, apply, type Action, type Card, type GameState } from '../src/index.js';
-import { card, num, rest, sq, stateFrom } from './helpers.js';
+import { card, num, sq, stateFrom, rest } from './helpers.js';
 
 function ok(state: GameState, player: string, action: Action): GameState {
   const r = apply(state, player, action);
@@ -20,24 +20,34 @@ const play = (c: { id: string }, extra: Partial<Extract<Action, { type: 'playCar
   ({ type: 'playCard', cardId: c.id, ...extra });
 
 describe('createGame', () => {
-  it('deals 7 each, leaves 94, white to move, players[0] is white', () => {
-    const g = createGame(42, 'A', 'B');
+  it('deals 7 each, leaves 100, white to move, players[0] is white', () => {
+    const g = createGame(42, ['A', 'B']);
     expect(g.hands.A).toHaveLength(7);
     expect(g.hands.B).toHaveLength(7);
-    expect(g.drawPile).toHaveLength(94);
+    expect(g.drawPile).toHaveLength(100);
     expect(g.current).toBe('A');
     expect(g.players).toEqual(['A', 'B']);
     expect(g.seats).toEqual({ w: 'A', b: 'B' });
     expect(g.phase).toEqual({ kind: 'awaitingCard' });
   });
   it('is deterministic for a seed', () => {
-    expect(createGame(5, 'A', 'B')).toEqual(createGame(5, 'A', 'B'));
+    expect(createGame(5, ['A', 'B'])).toEqual(createGame(5, ['A', 'B']));
   });
 });
 
 describe('Joker (0 card)', () => {
   const as = (kind: Card['kind'], value?: number): Partial<Extract<Action, { type: 'playCard' }>> => ({
     joker: value === undefined ? { kind } : { kind, value },
+  });
+
+  it('a card that does nothing still draws back to 7 and hands the turn over', () => {
+    const pass = rest();
+    const s = stateFrom(START_FEN, { w: [pass, ...Array.from({ length: 5 }, () => num(3))] });
+    const after = ok(s, 'A', play(pass));
+    expect(after.hands.A).toHaveLength(7);
+    expect(after.current).toBe('B');
+    expect(after.turn).toBe(2);
+    expect(after.discardPile.at(-1)).toEqual(pass);
   });
 
   it('becomes a move card: a Joker as a 3 gives three moves', () => {
@@ -65,11 +75,11 @@ describe('Joker (0 card)', () => {
     expect(after.effects.frozen).toEqual([{ pieceId: target, army: 'b' }]);
   });
 
-  it('becomes Draw four', () => {
+  it('becomes Draw four: the player draws the extra cards', () => {
     const joker = num(0);
-    const after = ok(stateFrom(START_FEN, { w: [joker], b: [num(1)] }), 'A', play(joker, as('wild4')));
-    expect(after.hands.B).toHaveLength(5);
-    expect(after.current).toBe('A');
+    const s = stateFrom(START_FEN, { w: [joker], b: [num(1)] });
+    const after = ok(s, 'A', play(joker, as('wild4')));
+    expect(after.log.some((e) => e.text === 'drew 4 extra cards')).toBe(true);
   });
 
   it('must say what it becomes, and cannot become another Joker', () => {
@@ -101,12 +111,13 @@ describe('move cards', () => {
     expect(s.current).toBe('B');
   });
 
-  it('rule B: the same piece cannot move twice', () => {
-    const c = num(2);
+  it('rule B: a piece may move twice on one card, never a third time', () => {
+    const c = num(3);
     let s = stateFrom(START_FEN, { w: [c] });
     s = ok(s, 'A', play(c));
     s = ok(s, 'A', mv('e2', 'e3'));
-    expect(fail(s, 'A', mv('e3', 'e4'))).toMatch(/already moved/);
+    s = ok(s, 'A', mv('e3', 'e4'));
+    expect(fail(s, 'A', mv('e4', 'e5'))).toMatch(/already moved twice/);
   });
 
   it('rule A: giving check ends the turn with moves left', () => {
@@ -190,7 +201,7 @@ describe('game end', () => {
     const rook = free.chess.board[sq('a7')]!.id;
     const after = ok(ok(free, 'B', play(c)), 'B', mv('a2', 'a1'));
     expect(after.phase).toEqual({ kind: 'awaitingCard' });
-    const frozen = stateFrom(FEN, { b: [c] }, { effects: { frozen: [{ pieceId: rook, army: 'w' }], shields: [], pendingSkip: null } });
+    const frozen = stateFrom(FEN, { b: [c] }, { effects: { frozen: [{ pieceId: rook, army: 'w' }], shields: [] } });
     const mated = ok(ok(frozen, 'B', play(c)), 'B', mv('a2', 'a1'));
     expect(mated.phase).toEqual({ kind: 'over', winner: 'B', reason: 'checkmate' });
   });
@@ -207,7 +218,7 @@ describe('game end', () => {
     const z = rest();
     const base = stateFrom('7k/8/8/8/8/p7/P7/K7 b - - 0 1', { b: [z] });
     const king = base.chess.board[sq('a1')]!.id;
-    const s = stateFrom('7k/8/8/8/8/p7/P7/K7 b - - 0 1', { b: [z] }, { effects: { frozen: [{ pieceId: king, army: 'w' }], shields: [], pendingSkip: null } });
+    const s = stateFrom('7k/8/8/8/8/p7/P7/K7 b - - 0 1', { b: [z] }, { effects: { frozen: [{ pieceId: king, army: 'w' }], shields: [] } });
     expect(ok(s, 'B', play(z)).phase).toEqual({ kind: 'awaitingCard' });
   });
 
@@ -234,12 +245,13 @@ describe('special chess moves', () => {
     expect(passed.chess.ep).toBeNull();
   });
 
-  it('castling counts as the king move and marks the rook moved', () => {
+  it('castling uses one move of the king and one move of the rook', () => {
     const c = num(3);
     let s = stateFrom('4k3/8/8/8/8/8/P7/4K2R w K - 0 1', { w: [c] });
     s = ok(ok(s, 'A', play(c)), 'A', mv('e1', 'g1'));
     expect(s.chess.board[sq('f1')]).toMatchObject({ type: 'r' });
-    expect(fail(s, 'A', mv('f1', 'f2'))).toMatch(/already moved/);
+    s = ok(s, 'A', mv('f1', 'f2'));
+    expect(fail(s, 'A', mv('f2', 'f3'))).toMatch(/already moved twice/);
   });
 });
 
@@ -265,9 +277,28 @@ describe('stale and out-of-turn actions', () => {
 describe('draw step', () => {
   it('does not draw when the hand still has 7 or more cards', () => {
     const hand = Array.from({ length: 8 }, () => rest());
-    const s = stateFrom(START_FEN, { w: hand });
+    const s = stateFrom(START_FEN, { w: hand, b: Array.from({ length: 7 }, () => rest()) });
     const after = ok(s, 'A', play(hand[0]));
     expect(after.hands.A).toHaveLength(7);
     expect(after.drawPile).toHaveLength(20);
+  });
+});
+
+describe('elimination and the hand', () => {
+  it('a two-player checkmate leaves the loser\'s hand and the discard pile alone', () => {
+    const c = num(1);
+    const loser = Array.from({ length: 7 }, () => num(2)); // a full hand, so the top-up leaves it alone
+    let s = stateFrom('rnbqkbnr/pppp1ppp/8/4p3/6P1/5P2/PPPPP2P/RNBQKBNR b KQkq - 0 1', { b: [c], w: loser });
+    s = ok(s, 'B', play(c));
+    s = ok(s, 'B', mv('d8', 'h4'));
+    expect(s.phase).toMatchObject({ kind: 'over', reason: 'checkmate' });
+    expect(s.hands.A).toEqual(loser);
+    expect(s.discardPile.map((x) => x.id)).not.toContain(loser[0].id);
+  });
+  it('a two-player resignation leaves the resigner\'s hand alone', () => {
+    const hand = [num(2), num(3)];
+    const s = ok(stateFrom(START_FEN, { w: hand }), 'A', { type: 'resign' });
+    expect(s.hands.A).toEqual(hand);
+    expect(s.discardPile).toEqual([]);
   });
 });

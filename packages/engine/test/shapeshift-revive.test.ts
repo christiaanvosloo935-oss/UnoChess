@@ -82,7 +82,7 @@ describe('8 · Shapeshift', () => {
     const base = stateFrom('4k3/8/8/3q4/8/8/3B4/4K3 w - - 0 1', { w: [eight] });
     const queen = idAt(base, 'd5');
     expect(legalShapeshifts(base, 'A').some((o) => o.as === 'r' && o.to === sq('d5'))).toBe(true);
-    const shielded: GameState = { ...base, effects: { frozen: [], shields: [{ pieceId: queen, owner: 'B' }], pendingSkip: null } };
+    const shielded: GameState = { ...base, effects: { frozen: [], shields: [{ pieceId: queen, owner: 'B' }] } };
     expect(legalShapeshifts(shielded, 'A').some((o) => o.to === sq('d5'))).toBe(false);
   });
 
@@ -98,7 +98,7 @@ describe('8 · Shapeshift', () => {
 
 describe('Wild · Revive', () => {
   it('legal squares are empty and in the first two rows, excluding squares that give check (rulebook p.4)', () => {
-    const s = stateFrom('2k5/8/8/8/8/8/8/4K3 w - - 0 1', { w: [card('wild')] }, { captured: { w: ['q'], b: [] } });
+    const s = stateFrom('2k5/8/8/8/8/8/8/4K3 w - - 0 1', { w: [card('wild')] }, { captured: { w: ['q'], r: [], b: [] } });
     const squares = legalRevives(s, 'A').map((o) => o.square);
     expect(squares).not.toContain(sq('c1'));
     expect(squares).not.toContain(sq('c2'));
@@ -110,7 +110,7 @@ describe('Wild · Revive', () => {
 
   it('a captured pawn may return as a queen; a captured knight returns as a knight only', () => {
     const wild = card('wild');
-    const s = stateFrom('4k3/8/8/8/8/8/8/4K3 w - - 0 1', { w: [wild] }, { captured: { w: ['p', 'n'], b: [] } });
+    const s = stateFrom('4k3/8/8/8/8/8/8/4K3 w - - 0 1', { w: [wild] }, { captured: { w: ['p', 'n'], r: [], b: [] } });
     const options = legalRevives(s, 'A');
     expect(options.some((o) => o.capturedIndex === 0 && o.asQueen)).toBe(true);
     expect(options.some((o) => o.capturedIndex === 0 && !o.asQueen)).toBe(true);
@@ -122,7 +122,7 @@ describe('Wild · Revive', () => {
 
   it('revives a black piece into black’s first two rows', () => {
     const wild = card('wild');
-    const s = stateFrom('4k3/8/8/8/8/8/8/4K3 b - - 0 1', { b: [wild] }, { captured: { w: [], b: ['r'] } });
+    const s = stateFrom('4k3/8/8/8/8/8/8/4K3 b - - 0 1', { b: [wild] }, { captured: { w: [], r: [], b: ['r'] } });
     expect(legalRevives(s, 'B').every((o) => o.square >= 48)).toBe(true);
   });
 
@@ -136,7 +136,7 @@ describe('Wild · Revive', () => {
 
   it('a revive that blocks check is playable as an effect in check', () => {
     const wild = card('wild');
-    const s = stateFrom('4r1k1/8/8/8/8/8/8/4K3 w - - 0 1', { w: [wild] }, { captured: { w: ['r'], b: [] } });
+    const s = stateFrom('4r1k1/8/8/8/8/8/8/4K3 w - - 0 1', { w: [wild] }, { captured: { w: ['r'], r: [], b: [] } });
     expect(playableCards(s, 'A')[0]).toMatchObject({ asEffect: true });
     expect(legalRevives(s, 'A')).toEqual([{ capturedIndex: 0, square: sq('e2'), asQueen: false }]);
     expect(fail(s, 'A', play(wild, { type: 'revive', capturedIndex: 0, square: sq('a2') }))).toMatch(/revived/);
