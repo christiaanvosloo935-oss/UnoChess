@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en-ZA">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Dawn Edition</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=UnifrakturMaguntia&family=Playfair+Display:ital,wght@0,600;0,700;0,800;1,600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Libre+Franklin:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Layout idea: a single-theme (light) broadsheet front page. Nameplate, dateline rule,
+   lead story across the top, then sections in ruled columns. Each story is a <details>
+   that opens in place. */
+:root {
+  --paper: #f7f6f1;
+  --ink: #141413;
+  --muted: #5d5c57;
+  --rule: #1c1c1a;
+  --hair: #cfcdc4;
+  --wash: #ecebe4;
+  --accent: #a3161d;
+  --display: "Playfair Display", "Times New Roman", Georgia, serif;
+  --body: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --label: "Libre Franklin", "Helvetica Neue", Arial, sans-serif;
+  --nameplate: "UnifrakturMaguntia", "Old English Text MT", "Times New Roman", serif;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--paper); color: var(--ink); }
+body { font-family: var(--body); font-size: 17px; line-height: 1.55; -webkit-font-smoothing: antialiased; }
+a { color: var(--accent); }
+a:focus-visible, summary:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+.page { max-width: 1180px; margin: 0 auto; padding: 20px 24px 64px; }
+
+/* Nameplate */
+.ears { display: flex; justify-content: space-between; gap: 16px; font-family: var(--label); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.nameplate { text-align: center; margin: 6px 0 4px; }
+.nameplate h1 { font-family: var(--nameplate); font-weight: 400; font-size: clamp(44px, 8vw, 92px); line-height: 1; margin: 0; letter-spacing: .01em; }
+.motto { font-family: var(--body); font-style: italic; color: var(--muted); font-size: 14px; margin-top: 4px; }
+.dateline { margin-top: 12px; border-top: 3px double var(--rule); border-bottom: 1px solid var(--rule); padding: 7px 0; display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; font-family: var(--label); font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+.dateline .tools { display: flex; gap: 8px; }
+.dateline button { font: inherit; letter-spacing: inherit; text-transform: inherit; background: transparent; color: var(--ink); border: 1px solid var(--rule); padding: 3px 9px; cursor: pointer; }
+.dateline button:hover { background: var(--ink); color: var(--paper); }
+
+/* Section index */
+.index { display: flex; flex-wrap: wrap; gap: 4px 18px; justify-content: center; padding: 9px 0; border-bottom: 1px solid var(--hair); font-family: var(--label); font-size: 12px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; }
+.index a { color: var(--ink); text-decoration: none; }
+.index a:hover { color: var(--accent); }
+
+/* Numbers strip */
+.numbers { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); border-bottom: 1px solid var(--rule); }
+.num { padding: 10px 14px; border-right: 1px solid var(--hair); }
+.num:last-child { border-right: 0; }
+.num .k { font-family: var(--label); font-size: 10.5px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.num .v { font-family: var(--display); font-weight: 700; font-size: 22px; font-variant-numeric: tabular-nums; line-height: 1.2; }
+.num .n { font-size: 12.5px; color: var(--muted); line-height: 1.3; }
+
+/* Stories */
+details.story { border: 0; }
+details.story > summary { list-style: none; cursor: pointer; }
+details.story > summary::-webkit-details-marker { display: none; }
+.kicker { font-family: var(--label); font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); display: block; margin-bottom: 4px; }
+.headline { font-family: var(--display); font-weight: 700; line-height: 1.15; margin: 0 0 6px; text-wrap: balance; }
+.dek { margin: 0; color: #2b2b29; }
+.more { display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; font-family: var(--label); font-size: 11.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.more::after { content: "+"; font-size: 14px; line-height: 1; }
+details[open] .more { color: var(--accent); }
+details[open] .more::after { content: "\2212"; }
+.more .open-label { display: none; }
+details[open] .more .open-label { display: inline; }
+details[open] .more .closed-label { display: none; }
+summary:hover .headline { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px; }
+.body { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--hair); }
+.body p { margin: 0 0 .8em; max-width: 68ch; }
+.why { background: var(--wash); border-left: 3px solid var(--accent); padding: 10px 14px; margin: 4px 0 12px; font-size: 15.5px; max-width: 68ch; }
+.why b { font-family: var(--label); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; display: block; margin-bottom: 2px; color: var(--accent); }
+.sources { font-family: var(--label); font-size: 12px; color: var(--muted); }
+.sources a { color: var(--muted); }
+.sources a:hover { color: var(--accent); }
+
+/* Lead */
+.lead { display: grid; grid-template-columns: 1fr; padding: 22px 0 20px; border-bottom: 3px double var(--rule); }
+.lead .headline { font-size: clamp(30px, 4.4vw, 50px); font-weight: 800; }
+.lead .dek { font-size: 20px; line-height: 1.45; max-width: 62ch; }
+.lead .body { columns: 2 320px; column-gap: 32px; column-rule: 1px solid var(--hair); }
+.lead .body p, .lead .body .why { break-inside: avoid; }
+
+/* Sections */
+.sections { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0 40px; }
+.section { padding-top: 20px; border-bottom: 1px solid var(--rule); padding-bottom: 8px; min-width: 0; }
+.section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; border-bottom: 2px solid var(--rule); padding-bottom: 4px; margin-bottom: 4px; }
+.section-head h2 { font-family: var(--label); font-size: 14px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; margin: 0; }
+.section-head .count { font-family: var(--label); font-size: 11px; color: var(--muted); letter-spacing: .06em; text-transform: uppercase; }
+.section .story { padding: 14px 0; border-bottom: 1px solid var(--hair); }
+.section .story:last-child { border-bottom: 0; }
+.section .story:first-of-type .headline { font-size: 25px; }
+.section .headline { font-size: 21px; }
+.section .dek { font-size: 16.5px; }
+
+/* Archive */
+.archive { margin-top: 28px; border-top: 3px double var(--rule); padding-top: 12px; }
+.archive h2 { font-family: var(--label); font-size: 13px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; margin: 0 0 8px; }
+.archive ul { margin: 0; padding: 0; list-style: none; columns: 2 300px; column-gap: 32px; }
+.archive li { padding: 5px 0; border-bottom: 1px solid var(--hair); break-inside: avoid; font-size: 15px; }
+.archive li span { font-family: var(--label); font-size: 10.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin-right: 6px; }
+.archive .empty { color: var(--muted); font-style: italic; font-size: 15px; }
+.colophon { margin-top: 22px; font-family: var(--label); font-size: 11.5px; color: var(--muted); text-align: center; }
+
+@media (max-width: 760px) {
+  .page { padding: 14px 16px 48px; }
+  .sections { grid-template-columns: 1fr; }
+  .ears { font-size: 10px; }
+  .ears span:last-child { display: none; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  details[open] > .body { animation: unfold .18s ease-out; }
+  @keyframes unfold { from { opacity: .4; transform: translateY(-3px); } to { opacity: 1; transform: none; } }
+}
+</style>
+</head>
+<body>
+<div class="page" id="top">
+  <div class="ears"><span id="ear-left"></span><span id="ear-right"></span></div>
+  <header class="nameplate">
+    <h1>The Dawn Edition</h1>
+    <div class="motto">The world before breakfast, delivered at six</div>
+  </header>
+  <div class="dateline">
+    <span id="dateline-text"></span>
+    <span class="tools">
+      <button type="button" id="expand-all">Expand all</button>
+      <button type="button" id="collapse-all">Collapse all</button>
+    </span>
+  </div>
+  <nav class="index" id="index" aria-label="Sections"></nav>
+  <div class="numbers" id="numbers"></div>
+  <main>
+    <article class="lead" id="lead"></article>
+    <div class="sections" id="sections"></div>
+  </main>
+  <section class="archive" id="archive" aria-labelledby="archive-title"></section>
+  <p class="colophon" id="colophon"></p>
+</div>
+
+<script>
+/* ===================== EDITION DATA: START =====================
+   The daily task replaces EDITION with today's paper and moves the
+   previous EDITION's headlines into PREVIOUS. Everything below the
+   END marker is the template and stays unchanged. */
+const EDITION = {
+  number: 2,
+  dateLong: "Sunday, 8 November 2026",
+  compiled: "Compiled 05:46 SAST",
+  lead: {
+    section: "World Politics",
+    kicker: "Israel",
+    headline: "Herzog picks Eisenkot over Netanyahu to form Israel's next government",
+    dek: "Former army chief Gadi Eisenkot won 67 of 120 Knesset recommendations to Netanyahu's 46. He receives the mandate at 17:00 Israeli time today and has 28 days to build a coalition.",
+    body: [
+      "No camp won a majority in the 27 October election. Eisenkot's four-party alliance took 48 seats, Netanyahu's right-wing and religious bloc 53, and Arab-led parties a record 19. Those Arab-led parties helped push Eisenkot, leader of the Yashar party, well clear of Netanyahu in the consultations with President Isaac Herzog; United Torah Judaism recommended no one.",
+      "The arithmetic is still awkward. Eisenkot has ruled out governing with Arab-led parties, and his hawkish partners campaigned to keep the ultra-Orthodox out of power. Adding UTJ and Shas would give him roughly 61 seats, but he has made universal military service a condition. Yisrael Beytenu's Avigdor Liberman says he would accept painful compromises on Haredi enlistment to avoid another election, while Shas has publicly denied reports that it would let an Eisenkot government stand. A minority government that survives a confidence vote with outside support is another route.",
+      "Netanyahu warned in a video that a government reliant on Arab parties would harm the state, and has called for a national unity government with his former allies. If Eisenkot fails within 28 days plus a possible 14-day extension, another candidate gets a turn; if nobody succeeds, Israel faces a fresh election within 90 days with Netanyahu as caretaker."
+    ],
+    why: "A post-Netanyahu government would reshape Israel's approach to Gaza, the West Bank and the Iran war, and with it the diplomatic temperature around South Africa's genocide case at the International Court of Justice.",
+    sources: [
+      { name: "Al Jazeera", url: "https://www.aljazeera.com/news/2026/11/7/israels-president-picks-eisenkot-over-netanyahu-to-form-next-government" },
+      { name: "Times of Israel", url: "https://www.timesofisrael.com/president-herzog-taps-eisenkot-to-form-coalition-but-path-remains-fraught/" },
+      { name: "Washington Post", url: "https://www.washingtonpost.com/world/2026/11/07/israeli-president-taps-ex-general-eisenkot-opponent-netanyahu-form-government/" }
+    ]
+  },
+  numbers: [
+    { k: "ANC ward vote", v: "30.7%", n: "99.7% of districts counted" },
+    { k: "Eisenkot backers", v: "67 / 120", n: "Netanyahu 46" },
+    { k: "Ebola (Bundibugyo)", v: "10,500+", n: "Confirmed cases; 5,126 deaths" },
+    { k: "Rand", v: "R16.53/$", n: "Friday morning, 0.3% weaker" },
+    { k: "COP31 opens", v: "Mon 9 Nov", n: "Antalya, Türkiye" }
+  ],
+  sections: [
+    {
+      id: "conflicts", name: "Wars & Conflicts",
+      stories: [
+        {
+          kicker: "Ukraine",
+          headline: "Russia fires 36 ballistic missiles at Kyiv ahead of Abu Dhabi talks",
+          dek: "An overnight barrage of 172 drones and 36 ballistic missiles hit energy sites and damaged Kyiv's Northern Bridge. Trilateral talks are set for 10 and 11 November.",
+          body: [
+            "President Zelensky said every ballistic missile was aimed at Kyiv city and region. The Institute for the Study of War says Russia's jet-powered drones are getting through more often and that Ukraine's stock of interceptors is running low. Ukraine struck back at missile launchers in Bryansk, a missile plant in Oryol and the Saratov oil refinery.",
+            "Rustem Umerov will lead Ukraine's team in Abu Dhabi. Russia is sending Vladimir Medinsky, Yuri Ushakov and two deputy foreign ministers, and its officials have again rejected security guarantees for Ukraine. On the ground, ISW reports Russian assaults have dropped sharply since late October, which it links to manpower shortages."
+          ],
+          why: "The Abu Dhabi round is the first real test of whether Washington's mediation can move beyond short local truces like the one that just lapsed in Oleshky.",
+          sources: [
+            { name: "ISW / Critical Threats", url: "https://www.criticalthreats.org/analysis/russian-offensive-campaign-assessment-november-7-2026-6aefc4cc503e5" },
+            { name: "Kyiv Post", url: "https://www.kyivpost.com/post/86409" }
+          ]
+        },
+        {
+          kicker: "Iran",
+          headline: "Trump confirms 'minor' strikes on Iranian air defences as tanker war claims a sailor",
+          dek: "The US president says American forces hit an Iranian air-defence system, while a seafarer was killed when a Greek-managed tanker was struck in the Gulf.",
+          body: [
+            "Trump's confirmation followed Iranian reports of explosions on Qeshm Island. The tanker Velos Sapphire was hit by a suspected missile en route to Bahrain, killing one crew member; Iran's Revolutionary Guards separately claim several tankers have struck mines near Hormuz, which Trump says Iran is fabricating. The US is offering up to $20 million for information on Iran's nuclear programme, and the Telegraph reports Iran is negotiating to buy Russian S-400 air defences.",
+            "Diplomacy is still alive. Trump spoke to Qatar's emir on Friday about ending the war, and Qatar says its mediation continues. Marco Rubio will face questions on Iran at a G7 foreign ministers' meeting in Paris on Monday and Tuesday. In Yemen, Houthi officials say a Saudi-led airstrike on a market in Taiz killed about 20 people; the coalition has not confirmed it."
+          ],
+          why: "Shipping risk around Hormuz is the swing factor for oil, and so for South Africa's December fuel-price adjustment.",
+          sources: [
+            { name: "CBS News live", url: "https://www.cbsnews.com/live-updates/iran-war-trump-us-strait-hormuz-persian-gulf/" },
+            { name: "Times of Israel live", url: "https://www.timesofisrael.com/liveblog-november-07-2026/" },
+            { name: "Morning Star", url: "https://morningstaronline.co.uk/article/world-brief-november-7-2026" }
+          ]
+        }
+      ]
+    },
+    {
+      id: "politics", name: "World Politics",
+      stories: [
+        {
+          kicker: "United States",
+          headline: "Alaska and Mississippi Senate races stay too close to call",
+          dek: "Democrats lead both remaining contests by fewer than 1,200 votes. Alaska's ranked-choice tally will not be published until 18 November.",
+          body: [
+            "In Mississippi, Democrat Scott Colom led Republican senator Cindy Hyde-Smith by about 1,100 votes at midweek with thousands of mail-in and affidavit ballots still to count; counties must certify by 13 November. In Alaska, Democrat Mary Peltola led senator Dan Sullivan by a few hundred votes with many ballots outstanding, complicated by a second, unrelated Dan Sullivan on the ballot.",
+            "Wins in both would take Democrats to 56 seats in the new Senate."
+          ],
+          why: "The size of the Democratic majority will shape how far Congress can check the White House on trade, including measures like the AGOA suspension.",
+          sources: [
+            { name: "Al Jazeera", url: "https://www.aljazeera.com/news/2026/11/5/whats-delaying-us-midterm-election-calls-in-mississippi-and-alaska" },
+            { name: "Fox News", url: "https://www.foxnews.com/politics/alaska-mississippi-senate-races-separate-razor-thin-vote-margins.amp" }
+          ]
+        },
+        {
+          kicker: "France",
+          headline: "Hundreds of thousands march as France's national strike day hits Macron",
+          dek: "Unions reported around 1,500 walkouts and 250 marches against spending cuts and falling living standards.",
+          body: [
+            "The strike day widened a protest movement that began with student blockades in October and now draws in unions and yellow-vest activists angry about fuel and living costs.",
+            "With public finances stretched, the government has little room for the kind of concessions Macron made during the 2018-19 yellow-vest crisis."
+          ],
+          why: "Cost-of-living politics in France and across the EU, one of South Africa's biggest trading partners, is squeezing budgets and demand.",
+          sources: [
+            { name: "Morning Star", url: "https://morningstaronline.co.uk/article/world-brief-november-7-2026" }
+          ]
+        }
+      ]
+    },
+    {
+      id: "sa-politics", name: "South African Politics",
+      stories: [
+        {
+          kicker: "Elections 2026",
+          headline: "IEC set to declare results today with the ANC near 31% and MK on top in KZN",
+          dek: "With 99.7% of voting districts in, the ANC has 30.7% of the ward vote, the DA 24.5% and MK 9.6%. Turnout is about 52%.",
+          body: [
+            "The ANC still leads six provinces, but the DA leads Gauteng and the Western Cape and Zuma's MK Party leads KwaZulu-Natal with about 34%, where the ANC has slumped to roughly 20% from 41% in 2021. The EFF has fallen to about 6%.",
+            "The DA leads the vote in Johannesburg, Tshwane, Ekurhuleni, Cape Town and Nelson Mandela Bay, but only Cape Town is a clear majority; MK leads eThekwini, the ANC holds Buffalo City and Mangaung is tight. More than 100 councils, including seven metros, face coalition talks. Once results are declared, councils must sit within 14 days to elect speakers and mayors."
+          ],
+          why: "The 14-day clock that starts with today's declaration will decide who runs Johannesburg, Tshwane and Ekurhuleni, and how stable those metros are.",
+          sources: [
+            { name: "ESP (IEC data)", url: "https://esp.info/elections/local/2026" },
+            { name: "Daily Maverick", url: "https://www.dailymaverick.co.za/article/2026-11-07-anc-faces-coalition-scramble-after-electoral-rout-as-control-of-key-metros-slips-away/" },
+            { name: "Jacaranda FM", url: "https://www.jacarandafm.com/news/news/seven-metros--100-councils-face-coalition-negotiations/" }
+          ]
+        },
+        {
+          kicker: "ANC",
+          headline: "Mbalula calls the result catastrophic and says the ANC will not beg for mayorships",
+          dek: "The secretary-general says the party saw the defeat coming, may choose opposition over bad deals, and wants to discuss the DA's place in the GNU.",
+          body: [
+            "Fikile Mbalula said internal polling had pointed to at least 34%, admitted the middle class has turned away, and said the party had feared being wiped out in KZN. The ANC is weighing full coalitions, confidence-and-supply deals or opposition, council by council, and has asked for a recount in Gauteng.",
+            "The ANC's top seven meet on Monday and its NEC on Thursday 12 November. Mbalula also said the party must discuss the DA's continued role in the national unity government after the DA opposed the ANC's court bid over candidates left off the ballot. Elsewhere, the EFF wants an ANC-MK-EFF-SACP front, and ActionSA says it will talk to anyone, with reservations about MK."
+          ],
+          why: "A falling-out over local deals could spill into the national GNU, the arrangement that has steadied markets and policy since 2024.",
+          sources: [
+            { name: "Business Day", url: "https://www.businessday.co.za/politics/2026-11-07-we-will-not-beg-for-mayorship-mbalula-says-anc-performance-in-polls-catastrophic/" },
+            { name: "The Citizen", url: "https://www.citizen.co.za/news/south-africa/elections/mbalula-we-knew-this-disaster-was-coming-we-thought-we-would-be-totally-wiped-out-in-kzn/" },
+            { name: "Daily Maverick", url: "https://www.dailymaverick.co.za/article/2026-11-07-anc-faces-coalition-scramble-after-electoral-rout-as-control-of-key-metros-slips-away/" }
+          ]
+        }
+      ]
+    },
+    {
+      id: "climate", name: "Climate & Environment",
+      stories: [
+        {
+          kicker: "COP31",
+          headline: "COP31 starts tomorrow with current pledges pointing to about 2.6°C",
+          dek: "UNEP's Emissions Gap Report says 2024 was the first calendar year above 1.5°C, and full delivery of today's national plans still leaves the world far off course.",
+          body: [
+            "Türkiye holds the presidency and runs the action agenda, but Australia has unusual exclusive control over the negotiations and draft texts. Key fights include whether the mitigation work programme continues beyond 2026, how to turn the Belém just-transition mechanism into something concrete, and the IPCC's failure in October to agree a timetable for its next assessment.",
+            "Money is the main fault line. COP30 promised to triple adaptation finance by 2035 without fixing a baseline, and the EU wants China and rich oil exporters to join the contributor base, which the G-77 resists."
+          ],
+          why: "The African Group's priority is delivery of adaptation finance, which matters for drought- and fire-exposed provinces like the Western Cape.",
+          sources: [
+            { name: "Clyde & Co briefing", url: "https://www.clydeco.com/en/insights/2026/11/cop31-briefing-paper" },
+            { name: "UN", url: "https://www.un.org/en/climatechange/cop31" }
+          ]
+        }
+      ]
+    },
+    {
+      id: "science", name: "Science",
+      stories: [
+        {
+          kicker: "Astronomy",
+          headline: "Rubin Observatory finds two hidden companions of the Milky Way",
+          dek: "Using preview data from just 7% of the sky, astronomers found a faint dwarf galaxy, Aquarius IV, and a dust-shrouded star cluster on the far side of the galaxy.",
+          body: [
+            "Aquarius IV lies about 355,000 light-years away; Rubin-GC1 was hidden behind thick dust. About 65 Milky Way satellites are known and models predict hundreds more, which Rubin's ten-year survey, begun in June, is expected to find.",
+            "Faint satellites like these are mostly dark matter, which makes them useful probes of what dark matter is."
+          ],
+          why: "A fuller count of dark-matter-dominated dwarf galaxies is one of the cleanest tests of how galaxies like ours were assembled.",
+          sources: [
+            { name: "ScienceDaily", url: "https://www.sciencedaily.com/releases/2026/11/261104012252.htm" }
+          ]
+        },
+        {
+          kicker: "Space",
+          headline: "NASA's Swift observatory burns up over Sumatra after 22 years",
+          dek: "Built for a two-year mission to chase gamma-ray bursts, the telescope re-entered the atmosphere over North Sumatra on Wednesday.",
+          body: [
+            "Launched in 2004, Swift could swing its three telescopes to a sudden cosmic event within minutes and alert observatories worldwide. It went on to study supernovae, flaring stars, black-hole-powered galaxies, comets and asteroids. NASA expected most of it to burn up."
+          ],
+          why: "Swift's rapid-alert model became the template for today's multi-observatory hunts for cosmic explosions.",
+          sources: [
+            { name: "ScienceDaily", url: "https://www.sciencedaily.com/releases/2026/11/261105224545.htm" }
+          ]
+        }
+      ]
+    },
+    {
+      id: "health", name: "Health & Medicine",
+      stories: [
+        {
+          kicker: "AHA 2026 · Cardiology",
+          headline: "Lp(a) and IL-6 drugs both fail outcomes trials despite hitting their targets",
+          dek: "Pelacarsen cut lipoprotein(a) by 78% but did not reduce MACE (HR 1.02). Ziltivekimab cut hs-CRP by 64% with no fall in events. Both were published in NEJM.",
+          body: [
+            "Lp(a)HORIZON randomised 8,323 secondary-prevention patients with Lp(a) of at least 70 mg/dL (median 109) to monthly pelacarsen 80 mg or placebo. Over a median 4.7 years, MACE occurred in 12.3% versus 12.1% (HR 1.02, 95% CI 0.90-1.15), with no benefit in the subgroup at 90 mg/dL or above. Drug-related adverse events (56.8% vs 18.0%) and discontinuations were higher, with 19 cases of anaphylaxis. Novartis has dropped the programme; the result does not settle the question for siRNA agents still in trials.",
+            "ZEUS gave 6,376 patients with ASCVD, CKD and hs-CRP of at least 2 mg/L monthly ziltivekimab 15 mg or placebo. IL-6 fell 76%, but MACE counts were almost identical (561 vs 565) over a median 29 months, and serious infections were slightly more common (20% vs 18%). Novo Nordisk has halted its heart-failure trials of the drug."
+          ],
+          why: "For now, statins, ezetimibe and PCSK9 inhibitors remain the evidence base; Lp(a) testing identifies risk but there is still no proven way to treat it.",
+          sources: [
+            { name: "TCTMD", url: "https://www.tctmd.com/news/full-lpahorizon-results-affirm-lack-pelacarsen-benefit-secondary-prevention" },
+            { name: "AHA newsroom (ZEUS)", url: "https://newsroom.heart.org/news/researchers-say-inflammation-as-a-treatment-target-still-important-despite-neutral-results-of-zeus-trial" },
+            { name: "STAT", url: "https://www.statnews.com/2026/11/07/aha-2026-conference-novo-nordisk-zeus-trial-ziltivekimab-results/" }
+          ]
+        },
+        {
+          kicker: "Ebola · DRC",
+          headline: "Two Bundibugyo-specific vaccines join the DRC Ebola trial as cases pass 10,500",
+          dek: "WHO backed adding candidates from Oxford/Serum Institute and Moderna. The outbreak, the largest in the DRC's history, has killed more than 5,100 people.",
+          body: [
+            "There is no licensed vaccine or specific therapy for Bundibugyo virus, and Ervebo targets the Zaire strain. The trial, led by the DRC's national biomedical research institute, already tests Ervebo in contacts; the new candidates still need national approval, and results are expected in early 2027. Case fatality is about 50%.",
+            "Kenya has reported nine cases and two deaths, and Nigeria one case. A British health worker infected in the DRC is being evacuated to the UK."
+          ],
+          why: "Spread to Kenya and Nigeria raises the stakes for SA port-of-entry screening and for clinicians taking travel histories in febrile patients.",
+          sources: [
+            { name: "WHO", url: "https://www.who.int/news/item/04-11-2026-two-new-candidate-vaccines-to-join-ebola-trial-as-treatment-research-advances" },
+            { name: "Al Jazeera", url: "https://www.aljazeera.com/news/2026/11/4/who-approves-trials-for-two-new-ebola-vaccines" },
+            { name: "allAfrica", url: "https://allafrica.com/stories/202611060129.html" }
+          ]
+        }
+      ]
+    },
+    {
+      id: "economy", name: "Economy & Markets",
+      stories: [
+        {
+          kicker: "Markets",
+          headline: "AI rout wipes about $3 trillion off Wall Street before a strong jobs report steadies it",
+          dek: "The S&P 500 fell more than 4% on Thursday and Nvidia 9%. On Friday the Nasdaq rose 1.1% after US payrolls grew by 165,000.",
+          body: [
+            "Investors fear that Democratic gains in the midterms will slow data-centre construction; Goldman Sachs estimates about 45% of planned US capacity could face limits from newly elected governors. The S&P 500 closed Friday at 7,376.86, up 0.3%, but tech and energy shares lost about 7% and 11% on the week.",
+            "October's payroll gain was more than double forecasts, and unemployment fell to 4.1%. Emerging markets felt the risk-off mood: the rand weakened to about R16.53 to the dollar on Friday morning and SA's 2035 bond yield rose to 8.33%."
+          ],
+          why: "A stronger dollar and nervy global markets work against the rand, even as lower oil prices offer some relief at the pump.",
+          sources: [
+            { name: "Yahoo Finance", url: "https://finance.yahoo.com/markets/live/stock-market-today-friday-november-6-dow-sp-500-nasdaq-jobs-report-earnings-135953863.html" },
+            { name: "CNBC Africa", url: "https://www.cnbcafrica.com/2026/south-african-rand-slips-on-stronger-dollar-local-election-vote-count-advances" }
+          ]
+        }
+      ]
+    },
+    {
+      id: "tech", name: "Technology & AI",
+      stories: [
+        {
+          kicker: "AI funding",
+          headline: "OpenAI raises $11 billion at a $1.25 trillion valuation, below its first ask",
+          dek: "The first close of the round landed on Friday, with SoftBank and Abu Dhabi's MGX among investors. Reports had put OpenAI's initial target at $1.4 trillion.",
+          body: [
+            "CFO Sarah Friar confirmed the pre-money valuation and disputed reports of a higher original ask. Up to about $9 billion more could follow. In March OpenAI raised $122 billion at $852 billion.",
+            "The AI sell-off is also weighing on Anthropic's planned mid-November Nasdaq listing, where some investors are reported to be pushing the valuation towards $1.5 trillion, down from earlier talk of about $2 trillion."
+          ],
+          why: "Cooler pricing for the biggest AI labs is an early sign of how much the infrastructure boom depends on investor appetite.",
+          sources: [
+            { name: "Yahoo Finance / 24/7 Wall St.", url: "https://finance.yahoo.com/technology/ai/articles/openai-just-raised-11-billion-133842228.html" },
+            { name: "Investing.com", url: "https://ng.investing.com/news/stock-market-news/openai-closes-11-billion-funding-at-125-trillion-valuation--report-2791256" }
+          ]
+        }
+      ]
+    }
+  ]
+};
+
+/* Headlines from the previous edition (only one day is kept). */
+const PREVIOUS = {
+  dateLong: "Saturday, 7 November 2026",
+  items: [
+    { section: "South Africa", headline: "ANC slumps to about 31% as the local-election count nears its end" },
+    { section: "Wars & Conflicts", headline: "Missiles strike Iran's Qeshm Island as Qatar keeps talks alive" },
+    { section: "Wars & Conflicts", headline: "Oleshky truce lapses as Washington pushes for something sturdier" },
+    { section: "World Politics", headline: "Democrats sweep both houses of Congress in a rebuke of Trump" },
+    { section: "World Politics", headline: "Paraguay's president impeached and placed under house arrest" },
+    { section: "World Politics", headline: "France's cost-of-living protests grind into a second month" },
+    { section: "South African Politics", headline: "Coalition talks begin as hung councils pile up" },
+    { section: "South African Politics", headline: "MK Party dominates KZN, pushing the ANC to third" },
+    { section: "Climate & Environment", headline: "COP31 opens on Monday in Antalya as the world heads past 1.5°C" },
+    { section: "Science", headline: "Traces of blood survive in 115-million-year-old dinosaur bones" },
+    { section: "Science", headline: "Asteroid Ryugu samples contain all five DNA and RNA bases" },
+    { section: "Health & Medicine", headline: "Calcium scans match risk scores for statin decisions with far fewer prescriptions" },
+    { section: "Economy & Markets", headline: "Oil has its steepest weekly fall since COVID on Iran-deal hopes" },
+    { section: "Economy & Markets", headline: "South Africa to lose AGOA duty-free access from 1 January" },
+    { section: "Technology & AI", headline: "AI shares slide as investors question the infrastructure boom" },
+    { section: "Technology & AI", headline: "OpenAI's GPT-6 Cyber and a new US 'Super Intelligence Task Force'" }
+  ]
+};
+/* ====================== EDITION DATA: END ====================== */
+
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const count = EDITION.sections.reduce((n, s) => n + s.stories.length, 1);
+
+  $("ear-left").textContent = "Vol. I · No. " + EDITION.number;
+  $("ear-right").textContent = "Pretoria · Cape Town · The World";
+  $("dateline-text").textContent = EDITION.dateLong + " · " + EDITION.compiled + " · " + count + " stories";
+
+  function storyHTML(s, isLead) {
+    const body = s.body.map((p) => "<p>" + esc(p) + "</p>").join("");
+    const why = s.why ? '<div class="why"><b>Why it matters</b>' + esc(s.why) + "</div>" : "";
+    const src = s.sources && s.sources.length
+      ? '<div class="sources">Sources: ' + s.sources.map((x) => '<a href="' + esc(x.url) + '" target="_blank" rel="noopener">' + esc(x.name) + "</a>").join(" · ") + "</div>"
+      : "";
+    const H = isLead ? "h2" : "h3";
+    return '<details class="story"><summary>' +
+      (s.kicker ? '<span class="kicker">' + esc(s.kicker) + "</span>" : "") +
+      "<" + H + ' class="headline">' + esc(s.headline) + "</" + H + ">" +
+      '<p class="dek">' + esc(s.dek) + "</p>" +
+      '<span class="more"><span class="closed-label">Read more</span><span class="open-label">Close</span></span>' +
+      '</summary><div class="body">' + body + why + src + "</div></details>";
+  }
+
+  $("lead").innerHTML = storyHTML(EDITION.lead, true);
+
+  $("index").innerHTML = '<a href="#lead">Top story</a>' +
+    EDITION.sections.map((s) => '<a href="#' + s.id + '">' + esc(s.name) + "</a>").join("");
+
+  $("numbers").innerHTML = (EDITION.numbers || []).map((n) =>
+    '<div class="num"><div class="k">' + esc(n.k) + '</div><div class="v">' + esc(n.v) + '</div><div class="n">' + esc(n.n) + "</div></div>").join("");
+
+  $("sections").innerHTML = EDITION.sections.map((s) =>
+    '<section class="section" id="' + s.id + '" aria-labelledby="h-' + s.id + '">' +
+    '<div class="section-head"><h2 id="h-' + s.id + '">' + esc(s.name) + '</h2><span class="count">' + s.stories.length + (s.stories.length === 1 ? " story" : " stories") + "</span></div>" +
+    s.stories.map((st) => storyHTML(st, false)).join("") + "</section>").join("");
+
+  let arch = '<h2 id="archive-title">Yesterday\'s front page</h2>';
+  if (PREVIOUS && PREVIOUS.items && PREVIOUS.items.length) {
+    arch += '<p class="sources" style="margin:0 0 8px">' + esc(PREVIOUS.dateLong) + "</p><ul>" +
+      PREVIOUS.items.map((i) => "<li><span>" + esc(i.section) + "</span>" + esc(i.headline) + "</li>").join("") + "</ul>";
+  } else {
+    arch += '<p class="empty">This is the first edition. From tomorrow, the previous day\'s headlines will be listed here.</p>';
+  }
+  $("archive").innerHTML = arch;
+
+  $("colophon").textContent = "Edition " + EDITION.number + " · Refreshed daily at 06:00 SAST · Click any headline to read more";
+
+  const all = () => document.querySelectorAll("details.story");
+  $("expand-all").addEventListener("click", () => all().forEach((d) => (d.open = true)));
+  $("collapse-all").addEventListener("click", () => all().forEach((d) => (d.open = false)));
+})();
+</script>
+</body>
+</html>
